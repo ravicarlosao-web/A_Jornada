@@ -9,12 +9,15 @@ import { TreinoScreen } from "@/components/screens/TreinoScreen";
 import { ResumoTemporadaScreen } from "@/components/screens/ResumoTemporadaScreen";
 import { ContratoScreen } from "@/components/screens/ContratoScreen";
 import { ResultadoFinalScreen } from "@/components/screens/ResultadoFinalScreen";
+import { PosCarreiraScreen } from "@/components/screens/PosCarreiraScreen";
+import { ConversaTecnicoScreen } from "@/components/screens/ConversaTecnicoScreen";
 
 const FASES_COM_STATUSBAR = new Set([
   "pre-temporada",
   "treino",
   "resumo-temporada",
   "contrato",
+  "conversa-tecnico",
 ]);
 
 function App() {
@@ -30,6 +33,9 @@ function App() {
     continuarCarreira,
     escolherProposta,
     aposentar,
+    escolherPosCarreira,
+    gerarOpcoesPosCarreira,
+    escolherConversaTecnico,
   } = useCareer();
 
   const mostrarStatusBar = estado.jogador && FASES_COM_STATUSBAR.has(estado.fase);
@@ -71,6 +77,10 @@ function App() {
         />
       )}
 
+      {estado.fase === "conversa-tecnico" && estado.jogador && (
+        <ConversaTecnicoScreen jogador={estado.jogador} onEscolher={escolherConversaTecnico} />
+      )}
+
       {estado.fase === "contrato" && estado.jogador && (
         <ContratoScreen
           jogador={estado.jogador}
@@ -79,8 +89,20 @@ function App() {
         />
       )}
 
+      {estado.fase === "pos-carreira" && estado.jogador && (
+        <PosCarreiraScreen
+          jogador={estado.jogador}
+          opcoes={gerarOpcoesPosCarreira(estado.jogador)}
+          onEscolher={escolherPosCarreira}
+        />
+      )}
+
       {estado.fase === "resultado-final" && estado.jogador && (
-        <ResultadoFinalScreen jogador={estado.jogador} onNovaCarreira={iniciarNovaCarreira} />
+        <ResultadoFinalScreen
+          jogador={estado.jogador}
+          onNovaCarreira={iniciarNovaCarreira}
+          epilogo={estado.epilogoPosCarreira}
+        />
       )}
     </div>
   );

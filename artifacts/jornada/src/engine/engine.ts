@@ -16,6 +16,7 @@ import type {
   Atributos,
   AtributosBase,
   Clube,
+  ConversaTecnicoOpcaoId,
   Dificuldade,
   EventoVestiario,
   FocoTreino,
@@ -24,9 +25,12 @@ import type {
   Manchete,
   Modo,
   OpcaoDraft,
+  OpcaoPosCarreira,
   Posicao,
+  PosCarreiraId,
   PropostaContrato,
   RegistroTemporada,
+  ResultadoConversaTecnico,
 } from "./types";
 
 const ATRIBUTOS_BASE: (keyof AtributosBase)[] = [
@@ -420,6 +424,136 @@ export function definirStatusElenco(rng: Rng, confiancaTecnico: number): "titula
   if (confiancaTecnico >= 60) return "titular";
   if (confiancaTecnico >= 35) return rng.random() < 0.7 ? "rotacao" : "titular";
   return rng.random() < 0.6 ? "reserva" : "rotacao";
+}
+
+export const OPCOES_CONVERSA_TECNICO: { id: ConversaTecnicoOpcaoId; titulo: string; descricao: string }[] = [
+  {
+    id: "respeitoso",
+    titulo: "Pedir explicações com respeito",
+    descricao: "Aborda o técnico em particular, sem drama. Ganho leve de relação, sem risco.",
+  },
+  {
+    id: "cobrar-imprensa",
+    titulo: "Cobrar publicamente (vaza pra imprensa)",
+    descricao: "Risco de irritar o técnico, mas pode render apoio da torcida se você tiver razão.",
+  },
+  {
+    id: "silencio",
+    titulo: "Aceitar a decisão em silêncio",
+    descricao: "Neutro para a relação, mas a frustração acumulada pode abalar seu Temperamento.",
+  },
+  {
+    id: "pedir-transferencia",
+    titulo: "Pedir para ser negociado",
+    descricao: "Sinaliza à diretoria que você quer sair — pode acelerar uma saída de clube.",
+  },
+];
+
+export function resolverConversaTecnico(
+  jogador: Jogador,
+  opcao: ConversaTecnicoOpcaoId,
+  rng: Rng,
+): ResultadoConversaTecnico {
+  if (opcao === "respeitoso") {
+    return {
+      jogador: { ...jogador, confiancaTecnico: rng.clamp(jogador.confiancaTecnico + 4, 0, 100) },
+      mensagem: `${jogador.nome} conversou com o técnico com maturidade. A relação melhorou um pouco.`,
+    };
+  }
+  if (opcao === "cobrar-imprensa") {
+    const notaBoa = jogador.fama > 55;
+    const confiancaTecnico = rng.clamp(jogador.confiancaTecnico - (notaBoa ? 6 : 14), 0, 100);
+    const fama = notaBoa ? rng.clamp(jogador.fama + 5, 0, 100) : jogador.fama;
+    return {
+      jogador: { ...jogador, confiancaTecnico, fama },
+      mensagem: notaBoa
+        ? `A cobrança pública de ${jogador.nome} caiu bem na torcida, mas azedou a relação com o técnico.`
+        : `A cobrança pública de ${jogador.nome} irritou bastante o técnico, sem gerar apoio relevante da torcida.`,
+    };
+  }
+  if (opcao === "silencio") {
+    return {
+      jogador: {
+        ...jogador,
+        atributos: {
+          ...jogador.atributos,
+          temperamento: rng.clamp(jogador.atributos.temperamento - 3, 1, 99),
+        },
+      },
+      mensagem: `${jogador.nome} engoliu a frustração em silêncio. O desgaste emocional pesa aos poucos.`,
+    };
+  }
+  return {
+    jogador: { ...jogador, confiancaTecnico: rng.clamp(jogador.confiancaTecnico - 5, 0, 100) },
+    mensagem: `${jogador.nome} pediu para ser negociado. A diretoria já avalia propostas de saída.`,
+  };
+}
+
+export function mentorarJovem(jogador: Jogador): Jogador {
+  return {
+    ...jogador,
+    jovensMentorados: jogador.jovensMentorados + 1,
+    atributos: {
+      ...jogador.atributos,
+      lideranca: Math.min(99, jogador.atributos.lideranca + 4),
+    },
+  };
+}
+
+export function gerarOpcoesPosCarreira(jogador: Jogador): OpcaoPosCarreira[] {
+  const titulosConquistados = jogador.historicoTemporadas.filter((h) => h.objetivoCumprido).length;
+  const embaixadorDisponivel = jogador.confiancaTecnico >= 65 && titulosConquistados >= 2;
+
+  return [
+    {
+      id: "tecnico",
+      titulo: "Técnico",
+      descricao: `Usar sua Liderança (${jogador.atributos.lideranca}) para iniciar carreira como treinador.`,
+      disponivel: true,
+    },
+    {
+      id: "comentarista",
+      titulo: "Comentarista / Jornalista",
+      descricao: `Usar seu Carisma (${jogador.atributos.carisma}) e Fama para narrar o próprio legado na mídia.`,
+      disponivel: true,
+    },
+    {
+      id: "empresario",
+      titulo: "Empresário / Investidor",
+      descricao: "Transformar a fama acumulada em um novo capítulo fora dos gramados.",
+      disponivel: true,
+    },
+    {
+      id: "embaixador",
+      titulo: "Embaixador do Clube",
+      descricao: embaixadorDisponivel
+        ? `O ${jogador.clubeAtual.nome} quer usar seu nome institucionalmente.`
+        : "Requer alta confiança do técnico e pelo menos 2 objetivos cumpridos na carreira.",
+      disponivel: embaixadorDisponivel,
+      motivoIndisponivel: embaixadorDisponivel
+        ? undefined
+        : "Você precisava de mais confiança do técnico e títulos para desbloquear este caminho.",
+    },
+  ];
+}
+
+export function gerarEpilogo(jogador: Jogador, escolha: PosCarreiraId, rng: Rng): string {
+  const nome = jogador.nome;
+  const clube = jogador.clubeAtual.nome;
+  const temporadas = jogador.historicoTemporadas.length;
+
+  if (escolha === "tecnico") {
+    const estilo = rng.pick(["posse de bola", "contra-ataque", "pressão alta", "linha defensiva sólida"]);
+    return `${nome} pendurou as chuteiras e foi direto para o banco de reservas. Com um overall de treinador construído sobre ${temporadas} temporadas de experiência e Liderança de ${jogador.atributos.lideranca}, adotou um estilo de ${estilo} e já é cotado como o próximo grande nome nos bastidores do futebol.`;
+  }
+  if (escolha === "comentarista") {
+    return `${nome} trocou o gramado pelo microfone. Com Carisma de ${jogador.atributos.carisma} e uma Fama construída ao longo da carreira, virou comentarista requisitado — e não é raro ver manchetes citando "como ${nome} bem lembrou em seu comentário pós-jogo".`;
+  }
+  if (escolha === "empresario") {
+    const valor = Math.round(jogador.fama * rng.range(0.8, 1.6) * 100000);
+    return `${nome} investiu o nome e a fama construídos na carreira em negócios próprios. Hoje comanda um pequeno império avaliado em torno de R$ ${valor.toLocaleString("pt-BR")}, citado como exemplo de atleta que soube planejar o pós-carreira.`;
+  }
+  return `${nome} se tornou embaixador institucional do ${clube}, representando o clube em eventos, viagens e negociações. Um fechamento à altura de uma carreira marcada por confiança e conquistas.`;
 }
 
 export interface Tier {

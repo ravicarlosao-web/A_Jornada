@@ -1,8 +1,17 @@
+import { useState } from "react";
 import type { Jogador } from "@/engine/types";
 
-export function PreTemporadaScreen({ jogador, onAvancar }: { jogador: Jogador; onAvancar: () => void }) {
+export function PreTemporadaScreen({
+  jogador,
+  onAvancar,
+}: {
+  jogador: Jogador;
+  onAvancar: (mentorarJovem?: boolean) => void;
+}) {
   const temporadaNumero = jogador.historicoTemporadas.length + 1;
   const contratoRestante = jogador.contrato.anosRestantes;
+  const [mentorar, setMentorar] = useState(false);
+  const podeMentorar = jogador.modo === "completo" && jogador.idade >= 24;
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-4 py-16 text-center">
@@ -31,8 +40,25 @@ export function PreTemporadaScreen({ jogador, onAvancar }: { jogador: Jogador; o
         </div>
       </div>
 
+      {podeMentorar && (
+        <label className="flex w-full cursor-pointer items-start gap-3 rounded-xl border p-4 text-left hover-elevate">
+          <input
+            type="checkbox"
+            checked={mentorar}
+            onChange={(e) => setMentorar(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="block font-medium">Mentorar um jovem da base</span>
+            <span className="block text-sm text-muted-foreground">
+              Investe seu tempo em uma promessa do clube. Você ganha Liderança e deixa uma marca no vestiário.
+            </span>
+          </span>
+        </label>
+      )}
+
       <button
-        onClick={onAvancar}
+        onClick={() => onAvancar(mentorar)}
         className="hover-elevate active-elevate-2 rounded-md bg-primary px-8 py-3 font-semibold text-primary-foreground"
       >
         {jogador.modo === "completo" ? "Ir para treino" : "Iniciar temporada"}

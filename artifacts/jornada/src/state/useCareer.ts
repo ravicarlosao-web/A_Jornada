@@ -8,17 +8,24 @@ import {
   criarAtributosBase,
   criarJogador,
   definirStatusElenco,
+  gerarEpilogo,
   gerarOpcoesDraft,
+  gerarOpcoesPosCarreira,
   gerarPropostasContrato,
+  mentorarJovem,
+  resolverConversaTecnico,
   simularTemporada,
 } from "@/engine/engine";
+import { salvarNoHallDaFama } from "@/state/hallDaFama";
 import type {
   Atributos,
+  ConversaTecnicoOpcaoId,
   Dificuldade,
   FocoTreino,
   Jogador,
   Modo,
   OpcaoDraft,
+  PosCarreiraId,
   Posicao,
   PropostaContrato,
   RegistroTemporada,
@@ -33,8 +40,10 @@ export type Fase =
   | "pre-temporada"
   | "treino"
   | "resumo-temporada"
+  | "conversa-tecnico"
   | "contrato"
   | "decisao-continuar"
+  | "pos-carreira"
   | "resultado-final";
 
 const STORAGE_KEY = "jornada-carreira-v1";
@@ -51,6 +60,8 @@ interface EstadoJogo {
   numeroTemporada: number;
   seed: string;
   propostasContrato: PropostaContrato[];
+  epilogoPosCarreira: string | null;
+  mensagemConversaTecnico: string | null;
 }
 
 const MAX_RODADAS_DRAFT = 8;
@@ -69,6 +80,8 @@ function estadoInicial(): EstadoJogo {
     numeroTemporada: 0,
     seed,
     propostasContrato: [],
+    epilogoPosCarreira: null,
+    mensagemConversaTecnico: null,
   };
 }
 
@@ -168,15 +181,19 @@ export function useCareer() {
     [rng],
   );
 
-  const avancarDaPreTemporada = useCallback(() => {
-    setEstado((prev) => {
-      if (!prev.jogador) return prev;
-      if (prev.jogador.modo === "completo") {
-        return { ...prev, fase: "treino" };
-      }
-      return simularEAtualizar(prev, rng);
-    });
-  }, [rng]);
+  const avancarDaPreTemporada = useCallback(
+    (mentorarJovemDaBase?: boolean) => {
+      setEstado((prev) => {
+        if (!prev.jogador) return prev;
+        const jogadorAtualizado = mentorarJovemDaBase ? mentorarJovem(prev.jogador) : prev.jogador;
+        if (jogadorAtualizado.modo === "completo") {
+          return { ...prev, jogador: jogadorAtualizado, fase: "treino" };
+        }
+        return simularEAtualizar({ ...prev, jogador: jogadorAtualizado }, rng);
+      });
+    },
+    [rng],
+  );
 
   const confirmarTreino = useCallback(
     (foco: FocoTreino) => {
@@ -193,23 +210,23 @@ export function useCareer() {
   const continuarCarreira = useCallback(() => {
     setEstado((prev) => {
       if (!prev.jogador) return prev;
-      const novaIdade = prev.jogador.idade + 1;
-      if (novaIdade >= 38) {
-        return finalizarCarreira(prev);
+      if (prev.jogador.modo === "completo" && prev.jogador.confiancaTecnico < 40) {
+        return { ...prev, fase: "conversa-tecnico" };
       }
-      const anosRestantes = prev.jogador.contrato.anosRestantes - 1;
-      const jogadorAtualizado: Jogador = {
-        ...prev.jogador,
-        idade: novaIdade,
-        contrato: { ...prev.jogador.contrato, anosRestantes },
-      };
-      if (anosRestantes <= 0) {
-        const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
-        return { ...prev, jogador: jogadorAtualizado, propostasContrato: propostas, fase: "contrato" };
-      }
-      return { ...prev, jogador: jogadorAtualizado, fase: "pre-temporada" };
+      return avancarTemporadaOuContrato(prev, rng);
     });
   }, [rng]);
+
+  const escolherConversaTecnico = useCallback(
+    (opcao: ConversaTecnicoOpcaoId) => {
+      setEstado((prev) => {
+        if (!prev.jogador) return prev;
+        const resultado = resolverConversaTecnico(prev.jogador, opcao, rng);
+        return avancarTemporadaOuContrato({ ...prev, jogador: resultado.jogador }, rng);
+      });
+    },
+    [rng],
+  );
 
   const escolherProposta = useCallback((proposta: PropostaContrato) => {
     setEstado((prev) => {
@@ -232,6 +249,17 @@ export function useCareer() {
     setEstado((prev) => finalizarCarreira(prev));
   }, []);
 
+  const escolherPosCarreira = useCallback(
+    (escolha: PosCarreiraId) => {
+      setEstado((prev) => {
+        if (!prev.jogador) return prev;
+        const epilogo = gerarEpilogo(prev.jogador, escolha, rng);
+        return { ...prev, epilogoPosCarreira: epilogo, fase: "resultado-final" };
+      });
+    },
+    [rng],
+  );
+
   return {
     estado,
     iniciarNovaCarreira,
@@ -244,7 +272,29 @@ export function useCareer() {
     continuarCarreira,
     escolherProposta,
     aposentar,
+    escolherPosCarreira,
+    gerarOpcoesPosCarreira,
+    escolherConversaTecnico,
   };
+}
+
+function avancarTemporadaOuContrato(prev: EstadoJogo, rng: Rng): EstadoJogo {
+  if (!prev.jogador) return prev;
+  const novaIdade = prev.jogador.idade + 1;
+  if (novaIdade >= 38) {
+    return finalizarCarreira(prev);
+  }
+  const anosRestantes = prev.jogador.contrato.anosRestantes - 1;
+  const jogadorAtualizado: Jogador = {
+    ...prev.jogador,
+    idade: novaIdade,
+    contrato: { ...prev.jogador.contrato, anosRestantes },
+  };
+  if (anosRestantes <= 0) {
+    const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
+    return { ...prev, jogador: jogadorAtualizado, propostasContrato: propostas, fase: "contrato" };
+  }
+  return { ...prev, jogador: jogadorAtualizado, fase: "pre-temporada" };
 }
 
 function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
@@ -285,7 +335,9 @@ function finalizarCarreira(prev: EstadoJogo): EstadoJogo {
   if (!prev.jogador) return prev;
   const jogadorAposentado = { ...prev.jogador, aposentado: true };
   localStorage.removeItem(STORAGE_KEY);
-  return { ...prev, jogador: jogadorAposentado, fase: "resultado-final" };
+  salvarNoHallDaFama(jogadorAposentado);
+  const fase = jogadorAposentado.modo === "completo" ? "pos-carreira" : "resultado-final";
+  return { ...prev, jogador: jogadorAposentado, fase };
 }
 
 export { calcularOverall, calcularTierFinal };

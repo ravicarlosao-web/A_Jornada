@@ -111,3 +111,26 @@ export interface FocoTreino {
   recuperacao: number;
   tatica: number;
 }
+
+export type ConversaTecnicoOpcaoId = "respeitoso" | "cobrar-imprensa" | "silencio" | "pedir-transferencia";
+
+export interface ConversaTecnicoOpcao {
+  id: ConversaTecnicoOpcaoId;
+  titulo: string;
+  descricao: string;
+}
+
+export interface ResultadoConversaTecnico {
+  jogador: Jogador;
+  mensagem: string;
+}
+
+export type PosCarreiraId = "tecnico" | "comentarista" | "empresario" | "embaixador";
+
+export interface OpcaoPosCarreira {
+  id: PosCarreiraId;
+  titulo: string;
+  descricao: string;
+  disponivel: boolean;
+  motivoIndisponivel?: string;
+}

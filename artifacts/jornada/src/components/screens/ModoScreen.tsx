@@ -1,6 +1,14 @@
+import { useState } from "react";
 import type { Modo } from "@/engine/types";
+import { HallFamaScreen } from "@/components/screens/HallFamaScreen";
 
 export function ModoScreen({ onEscolher }: { onEscolher: (modo: Modo) => void }) {
+  const [mostrarHallFama, setMostrarHallFama] = useState(false);
+
+  if (mostrarHallFama) {
+    return <HallFamaScreen onVoltar={() => setMostrarHallFama(false)} />;
+  }
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 px-4 py-16 text-center">
       <div>
@@ -30,6 +38,12 @@ export function ModoScreen({ onEscolher }: { onEscolher: (modo: Modo) => void })
           </p>
         </button>
       </div>
+      <button
+        onClick={() => setMostrarHallFama(true)}
+        className="hover-elevate active-elevate-2 rounded-md border px-6 py-2 text-sm font-semibold text-muted-foreground"
+      >
+        Ver Hall da Fama
+      </button>
     </div>
   );
 }
