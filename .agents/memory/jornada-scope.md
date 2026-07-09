@@ -8,3 +8,5 @@ The original spec (attached_assets) describes a much larger game with injuries, 
 **Why:** free-tier effort/scope constraints — building the full spec was not feasible in one pass.
 
 **How to apply:** if the user asks for contracts, injuries, or social-media features later, treat them as net-new additions to `artifacts/jornada/src/engine/engine.ts` and `types.ts`, not bug fixes to existing behavior.
+
+**Update:** Added injury system (chance-based, reduces games played, shown in season summary) and contract negotiation (renewal + rival club offers when contract expires) plus a persistent StatusBar header across in-career screens. Still missing from full spec: dressing-room dynamics, social media, detailed post-career content.

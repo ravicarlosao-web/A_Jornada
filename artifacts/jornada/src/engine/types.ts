@@ -41,6 +41,12 @@ export interface Manchete {
   tom: "positiva" | "negativa" | "neutra";
 }
 
+export interface Lesao {
+  gravidade: "leve" | "moderada" | "grave";
+  jogosPerdidos: number;
+  descricao: string;
+}
+
 export interface RegistroTemporada {
   temporada: number;
   idade: number;
@@ -55,12 +61,20 @@ export interface RegistroTemporada {
   premio: string | null;
   manchetes: Manchete[];
   statusElenco?: "titular" | "rotacao" | "reserva";
+  lesao?: Lesao | null;
 }
 
 export interface Contrato {
   salarioAnual: number;
   duracaoAnos: number;
   anosRestantes: number;
+}
+
+export interface PropostaContrato {
+  clube: Clube;
+  salarioAnual: number;
+  duracaoAnos: number;
+  ehClubeAtual: boolean;
 }
 
 export interface Jogador {

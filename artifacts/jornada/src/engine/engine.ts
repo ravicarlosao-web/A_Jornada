@@ -1,5 +1,13 @@
 import { Rng } from "./rng";
-import { LENDAS, CLUBES, OBJETIVOS, MANCHETES_POSITIVAS, MANCHETES_NEGATIVAS, MANCHETES_NEUTRAS } from "./data";
+import {
+  LENDAS,
+  CLUBES,
+  OBJETIVOS,
+  MANCHETES_POSITIVAS,
+  MANCHETES_NEGATIVAS,
+  MANCHETES_NEUTRAS,
+  DESCRICOES_LESAO,
+} from "./data";
 import type {
   Atributos,
   AtributosBase,
@@ -7,10 +15,12 @@ import type {
   Dificuldade,
   FocoTreino,
   Jogador,
+  Lesao,
   Manchete,
   Modo,
   OpcaoDraft,
   Posicao,
+  PropostaContrato,
   RegistroTemporada,
 } from "./types";
 
@@ -189,7 +199,26 @@ export function simularTemporada(params: {
     modificadorTecnico;
 
   const jogosBase = statusElenco === "titular" ? 32 : statusElenco === "rotacao" ? 20 : 8;
-  const jogos = Math.max(1, Math.round(jogosBase + rng.range(-3, 3)));
+  let jogos = Math.max(1, Math.round(jogosBase + rng.range(-3, 3)));
+
+  const chanceLesao = rng.clamp(0.1 + jogador.fadiga / 300 + Math.max(0, jogador.idade - 30) * 0.01, 0.05, 0.4);
+  let lesao: Lesao | null = null;
+  if (rng.random() < chanceLesao) {
+    const roll = rng.random();
+    const gravidade: Lesao["gravidade"] = roll < 0.55 ? "leve" : roll < 0.88 ? "moderada" : "grave";
+    const jogosPerdidos =
+      gravidade === "leve"
+        ? Math.round(rng.range(1, 4))
+        : gravidade === "moderada"
+          ? Math.round(rng.range(4, 10))
+          : Math.round(rng.range(10, 20));
+    lesao = {
+      gravidade,
+      jogosPerdidos,
+      descricao: rng.pick(DESCRICOES_LESAO[gravidade]),
+    };
+    jogos = Math.max(1, jogos - jogosPerdidos);
+  }
 
   const isAtaqueOuMeio = jogador.posicao === "ATA" || jogador.posicao === "MEI";
   const lambdaGols = isAtaqueOuMeio ? (nivelEfetivo / 99) * 0.55 : (nivelEfetivo / 99) * 0.12;
@@ -265,6 +294,15 @@ export function simularTemporada(params: {
     100,
   );
 
+  if (lesao) {
+    manchetes.push({
+      id: `${numeroTemporada}-lesao`,
+      temporada: numeroTemporada,
+      texto: `${jogador.nome} sofre lesão: ${lesao.descricao} e desfalca o time por semanas`,
+      tom: "negativa",
+    });
+  }
+
   const registro: RegistroTemporada = {
     temporada: numeroTemporada,
     idade: jogador.idade,
@@ -279,6 +317,7 @@ export function simularTemporada(params: {
     premio,
     manchetes,
     statusElenco,
+    lesao,
   };
 
   return {
@@ -288,6 +327,41 @@ export function simularTemporada(params: {
     confiancaTecnicoAtualizada: confiancaTecnico,
     fadigaAtualizada,
   };
+}
+
+export function gerarPropostasContrato(params: {
+  rng: Rng;
+  jogador: Jogador;
+}): PropostaContrato[] {
+  const { rng, jogador } = params;
+  const overall = calcularOverall(jogador.atributos, jogador.posicao);
+  const nivel = overall + jogador.fama * 0.2;
+
+  const propostaAtual: PropostaContrato = {
+    clube: jogador.clubeAtual,
+    salarioAnual: Math.round(jogador.contrato.salarioAnual * (1 + rng.range(0.05, 0.25))),
+    duracaoAnos: rng.int(2, 4),
+    ehClubeAtual: true,
+  };
+
+  const propostas: PropostaContrato[] = [propostaAtual];
+
+  const candidatos = CLUBES.filter((c) => c.nome !== jogador.clubeAtual.nome).sort(
+    (a, b) => Math.abs(a.forca * 20 - nivel) - Math.abs(b.forca * 20 - nivel),
+  );
+
+  const numOfertas = rng.random() < 0.7 ? (rng.random() < 0.5 ? 1 : 2) : 0;
+  for (let i = 0; i < numOfertas && i < candidatos.length; i++) {
+    const clube = candidatos[i];
+    propostas.push({
+      clube,
+      salarioAnual: Math.round((30000 + clube.forca * 25000) * rng.range(0.9, 1.2)),
+      duracaoAnos: rng.int(2, 4),
+      ehClubeAtual: false,
+    });
+  }
+
+  return propostas;
 }
 
 export function definirStatusElenco(rng: Rng, confiancaTecnico: number): "titular" | "rotacao" | "reserva" {

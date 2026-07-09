@@ -9,6 +9,7 @@ import {
   criarJogador,
   definirStatusElenco,
   gerarOpcoesDraft,
+  gerarPropostasContrato,
   simularTemporada,
 } from "@/engine/engine";
 import type {
@@ -19,6 +20,7 @@ import type {
   Modo,
   OpcaoDraft,
   Posicao,
+  PropostaContrato,
   RegistroTemporada,
 } from "@/engine/types";
 
@@ -31,6 +33,7 @@ export type Fase =
   | "pre-temporada"
   | "treino"
   | "resumo-temporada"
+  | "contrato"
   | "decisao-continuar"
   | "resultado-final";
 
@@ -47,6 +50,7 @@ interface EstadoJogo {
   ultimoRegistro: RegistroTemporada | null;
   numeroTemporada: number;
   seed: string;
+  propostasContrato: PropostaContrato[];
 }
 
 const MAX_RODADAS_DRAFT = 8;
@@ -64,6 +68,7 @@ function estadoInicial(): EstadoJogo {
     ultimoRegistro: null,
     numeroTemporada: 0,
     seed,
+    propostasContrato: [],
   };
 }
 
@@ -192,8 +197,34 @@ export function useCareer() {
       if (novaIdade >= 38) {
         return finalizarCarreira(prev);
       }
-      const jogadorAtualizado = { ...prev.jogador, idade: novaIdade };
+      const anosRestantes = prev.jogador.contrato.anosRestantes - 1;
+      const jogadorAtualizado: Jogador = {
+        ...prev.jogador,
+        idade: novaIdade,
+        contrato: { ...prev.jogador.contrato, anosRestantes },
+      };
+      if (anosRestantes <= 0) {
+        const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
+        return { ...prev, jogador: jogadorAtualizado, propostasContrato: propostas, fase: "contrato" };
+      }
       return { ...prev, jogador: jogadorAtualizado, fase: "pre-temporada" };
+    });
+  }, [rng]);
+
+  const escolherProposta = useCallback((proposta: PropostaContrato) => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      const jogadorAtualizado: Jogador = {
+        ...prev.jogador,
+        clubeAtual: proposta.clube,
+        contrato: {
+          salarioAnual: proposta.salarioAnual,
+          duracaoAnos: proposta.duracaoAnos,
+          anosRestantes: proposta.duracaoAnos,
+        },
+        confiancaTecnico: proposta.ehClubeAtual ? prev.jogador.confiancaTecnico : 50,
+      };
+      return { ...prev, jogador: jogadorAtualizado, propostasContrato: [], fase: "pre-temporada" };
     });
   }, []);
 
@@ -211,6 +242,7 @@ export function useCareer() {
     avancarDaPreTemporada,
     confirmarTreino,
     continuarCarreira,
+    escolherProposta,
     aposentar,
   };
 }

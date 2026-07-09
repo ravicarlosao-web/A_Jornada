@@ -1,4 +1,5 @@
 import { useCareer } from "@/state/useCareer";
+import { StatusBar } from "@/components/StatusBar";
 import { ModoScreen } from "@/components/screens/ModoScreen";
 import { DificuldadeScreen } from "@/components/screens/DificuldadeScreen";
 import { DraftScreen } from "@/components/screens/DraftScreen";
@@ -6,7 +7,15 @@ import { PosicaoScreen } from "@/components/screens/PosicaoScreen";
 import { PreTemporadaScreen } from "@/components/screens/PreTemporadaScreen";
 import { TreinoScreen } from "@/components/screens/TreinoScreen";
 import { ResumoTemporadaScreen } from "@/components/screens/ResumoTemporadaScreen";
+import { ContratoScreen } from "@/components/screens/ContratoScreen";
 import { ResultadoFinalScreen } from "@/components/screens/ResultadoFinalScreen";
+
+const FASES_COM_STATUSBAR = new Set([
+  "pre-temporada",
+  "treino",
+  "resumo-temporada",
+  "contrato",
+]);
 
 function App() {
   const {
@@ -19,11 +28,16 @@ function App() {
     avancarDaPreTemporada,
     confirmarTreino,
     continuarCarreira,
+    escolherProposta,
     aposentar,
   } = useCareer();
 
+  const mostrarStatusBar = estado.jogador && FASES_COM_STATUSBAR.has(estado.fase);
+
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
+    <div className="min-h-screen w-full bg-background text-foreground [background-image:radial-gradient(circle_at_top,_hsl(var(--primary)/0.08),_transparent_55%)]">
+      {mostrarStatusBar && estado.jogador && <StatusBar jogador={estado.jogador} />}
+
       {estado.fase === "inicio" && <ModoScreen onEscolher={escolherModo} />}
 
       {estado.fase === "dificuldade" && <DificuldadeScreen onEscolher={escolherDificuldade} />}
@@ -54,6 +68,14 @@ function App() {
           onContinuar={continuarCarreira}
           onAposentar={aposentar}
           podeAposentar={(estado.jogador?.idade ?? 0) >= 28}
+        />
+      )}
+
+      {estado.fase === "contrato" && estado.jogador && (
+        <ContratoScreen
+          jogador={estado.jogador}
+          propostas={estado.propostasContrato}
+          onEscolher={escolherProposta}
         />
       )}
 

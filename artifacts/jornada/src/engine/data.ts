@@ -69,3 +69,9 @@ export const MANCHETES_NEUTRAS = [
   "{nome} fala sobre rotina de treinos em nova reportagem",
   "Perfil de {nome} é destaque em programa esportivo",
 ];
+
+export const DESCRICOES_LESAO: Record<"leve" | "moderada" | "grave", string[]> = {
+  leve: ["Sofreu um estiramento muscular leve", "Torceu o tornozelo em treino"],
+  moderada: ["Lesionou o joelho em disputa de bola", "Sofreu uma lesão muscular na coxa"],
+  grave: ["Rompeu o ligamento e passou por cirurgia", "Sofreu fratura e ficou meses fora dos gramados"],
+};

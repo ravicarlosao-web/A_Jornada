@@ -45,6 +45,17 @@ export function ResumoTemporadaScreen({
         </div>
       )}
 
+      {registro.lesao && (
+        <div className="rounded-xl border border-destructive bg-destructive/10 p-4 text-center">
+          <p className="font-semibold">
+            Lesão {registro.lesao.gravidade}: {registro.lesao.descricao}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {registro.lesao.jogosPerdidos} jogos perdidos por lesão
+          </p>
+        </div>
+      )}
+
       {registro.manchetes.map((m) => (
         <div key={m.id} className="rounded-xl border p-4 italic text-muted-foreground">
           "{m.texto}"
