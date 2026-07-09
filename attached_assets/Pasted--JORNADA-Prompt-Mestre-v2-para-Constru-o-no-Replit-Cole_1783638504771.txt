@@ -1,0 +1,497 @@
+# JORNADA — Prompt Mestre v2 para Construção no Replit
+
+> Cole este documento inteiro no Replit Agent como prompt inicial. Ele descreve o jogo completo em dois modos de jogo, com todas as fórmulas, sistemas, estruturas de dados e arquitetura técnica. Esta é a versão 2 — expande a v1 com Modo Curto/Modo Longo, Treinamento, Relação com Técnico, Lesões detalhadas, Contrato/Salário, Substituições em jogos decisivos, e sistemas adicionais de suporte (vestiário, rotação de minutos, redes sociais, objetivos de diretoria, pós-carreira).
+
+---
+
+## 1. VISÃO GERAL
+
+**Nome do jogo:** Jornada
+
+**Pitch:** Um simulador de carreira de futebol jogável em dois formatos — uma sessão rápida de poucos minutos ou uma carreira completa e granular, com dezenas de decisões por temporada. O jogador monta um atleta via draft ("roube atributos de lendas"), escolhe posição, e vive a carreira dos 16 anos até a aposentadoria (e além, na pós-carreira). Ao longo do caminho, dois sistemas centrais tornam o jogo vivo: **Imprensa** (jornalistas recorrentes, manchetes, entrevistas, redes sociais) e **Pressão** (curva de desempenho, momentos decisivos, relação com o técnico, cobrança da diretoria e da torcida).
+
+**Diferencial central:** o jogo não separa "estatística" de "narrativa". Toda decisão de gameplay (aceitar um atributo no draft, responder uma entrevista, negociar salário, reagir a ser substituído) tem efeito mecânico mensurável e retroalimenta os outros sistemas.
+
+---
+
+## 2. MODOS DE JOGO
+
+Esta é a decisão estrutural mais importante do jogo — os dois modos não são só "dificuldade", são **duas experiências de granularidade diferente** sobre o mesmo motor de simulação.
+
+### 2.1 Modo Rápido (Sprint)
+
+- Duração de jogo: 2 a 5 minutos.
+- Cada temporada é resumida em **uma tela de resumo** (jogos, gols, assistências, nota média, 1 evento de imprensa marcante, 1 evento de pressão marcante quando aplicável).
+- Sem tela de treinamento semanal — o desenvolvimento de atributos acontece automaticamente em segundo plano, com uma pequena aleatoriedade guiada pela idade e posição.
+- Contrato/salário é abstraído — só aparece como gatilho de pressão ("a diretoria espera mais de você por causa do seu salário"), sem tela de negociação.
+- Ideal para quem quer repetir runs rapidamente e comparar "cards" de carreira, como o público do gênero já está acostumado.
+
+### 2.2 Modo Carreira Completa (Longo)
+
+- Duração de jogo: 30 a 90+ minutos por carreira completa.
+- Cada temporada se desdobra em **ciclos mensais ou por bloco de jogos** (configurável — recomendo blocos de 4-6 jogos, não jogo a jogo, para não cansar).
+- Ativa todos os sistemas extras da seção 6 em diante: Treinamento, Relação com Técnico, Lesões detalhadas, Contrato/Salário com negociação real, Substituições em jogos decisivos, Vestiário/Elenco, Rotação de Minutos, Redes Sociais, Objetivos da Diretoria, Vida Pessoal, Pós-carreira.
+- Pensado para quem quer a fantasia de "gerenciar uma carreira" de verdade, não só rolar dados e ver o resultado.
+
+### 2.3 Regra de arquitetura
+
+Os dois modos **devem compartilhar o mesmo motor de simulação (engine)** — o Modo Rápido apenas **não expõe** certas telas de decisão e usa valores automáticos/médios no lugar da escolha manual do jogador para os sistemas avançados. Isso evita duas bases de código divergentes. Cada sistema avançado deve ter uma função `autoResolve()` que simula a decisão que o jogador tomaria no modo longo, usada quando o Modo Rápido está ativo.
+
+Tabela de equivalência (o que cada sistema faz automaticamente no Modo Rápido):
+
+| Sistema | Modo Longo (manual) | Modo Rápido (automático) |
+|---|---|---|
+| Treinamento | Jogador escolhe foco semanal | Foco distribuído conforme posição + leve viés para atributo mais fraco |
+| Relação com Técnico | Jogador gerencia ativamente (conversas, pedidos) | Relação calculada por desempenho vs minutos recebidos |
+| Lesões | Jogador escolhe ritmo de recuperação (arriscar retorno antecipado ou não) | Sistema escolhe o caminho conservador por padrão |
+| Contrato/Salário | Negociação interativa | Resolvido automaticamente por fórmula de mercado |
+| Substituição em jogo decisivo | Jogador escolhe reação (aceitar, reclamar, etc.) | Reação "neutra" aplicada, sem bônus/ônus extra |
+| Redes Sociais | Jogador escreve/escolhe posts | Sistema gera posts automáticos, com risco de controvérsia reduzido |
+| Objetivos da Diretoria | Jogador pode negociar metas na pré-temporada | Metas padrão atribuídas conforme força do clube |
+
+---
+
+## 3. LOOP PRINCIPAL
+
+```
+TELA INICIAL
+   ↓
+ESCOLHA DE MODO (Rápido / Carreira Completa)
+   ↓
+ESCOLHA DE DIFICULDADE (Amador / Pro)
+   ↓
+DRAFT DE ATRIBUTOS (8 giros, roubando de lendas)
+   ↓
+ESCOLHA DE POSIÇÃO
+   ↓
+GERAÇÃO DO CLUBE INICIAL
+   ↓
+LOOP DE TEMPORADAS:
+   ├─ Pré-temporada
+   │    ├─ Objetivos da diretoria definidos (seção 12)
+   │    ├─ Expectativa da torcida gerada
+   │    └─ [Modo Longo] Pré-temporada de treinos (ajuste inicial de físico/forma)
+   ├─ Ciclo de temporada (jogo a jogo no Longo / resumido no Rápido)
+   │    ├─ [Modo Longo] Semana de treinamento (escolha de foco)
+   │    ├─ Simulação de partidas
+   │    ├─ [Modo Longo] Eventos de rotação/minutos
+   │    ├─ Eventos de Imprensa (manchetes, entrevistas, redes sociais)
+   │    ├─ Eventos de Pressão (momentos decisivos, substituições)
+   │    ├─ [Modo Longo] Eventos de lesão quando ocorrem
+   │    └─ [Modo Longo] Eventos de vestiário/vida pessoal ocasionais
+   ├─ Fim de temporada
+   │    ├─ Estatísticas e nota média
+   │    ├─ Avaliação dos objetivos da diretoria (bônus/multa)
+   │    ├─ Prêmios elegíveis
+   │    └─ [Modo Longo] Renovação/negociação de contrato quando aplicável
+   ├─ Janela de transferência (condicional)
+   └─ Decisão de continuar/aposentar
+   ↓
+APOSENTADORIA
+   ↓
+[Modo Longo] ESCOLHA DE PÓS-CARREIRA (seção 13)
+   ↓
+TELA DE RESULTADO FINAL (Tier de carreira + card compartilhável)
+```
+
+---
+
+## 4. ATRIBUTOS
+
+Escala de 1 a 99, salvo indicação contrária.
+
+| Atributo | Descrição | Relevância |
+|---|---|---|
+| Ritmo | Velocidade e aceleração | Transição, pressão alta, ponta |
+| Finalização | Conversão de chances em gol | Ataque |
+| Passe | Precisão e visão de jogo | Construção, meio-campo |
+| Drible | Capacidade de superar marcação | Ala, criação individual |
+| Defesa | Interceptação, desarme, posicionamento | Zaga, volante |
+| Físico | Força, resistência, duelos aéreos | Todas, mais zaga/ataque |
+| Reflexos | Exclusivo goleiro | Goleiro |
+| Perna Ruim | 1-5 estrelas | Modificador situacional |
+| Dribles Especiais | 1-5 estrelas | Modificador de criação |
+| **Temperamento** | Estabilidade emocional sob pressão | Sistema de Pressão |
+| **Carisma** | Relação com mídia e torcida | Sistema de Imprensa |
+| **Foco** *(novo)* | Eficiência de aprendizado no treino | Sistema de Treinamento (seção 6) |
+| **Liderança** *(novo, oculto no início)* | Influência no vestiário e em jogadores jovens | Sistema de Vestiário (seção 9) |
+
+`Temperamento`, `Carisma`, `Foco` e `Liderança` não entram no draft — evoluem organicamente pelas decisões do jogador ao longo da carreira (entrevistas, treino, vestiário, momentos de pressão). Isso os torna consequência de estilo de jogo, não de sorte no draft.
+
+### 4.1 Overall por posição
+
+Mantém a mesma lógica da v1 — matriz de pesos em arquivo de configuração separado (`positionWeights.json`), nunca hardcoded. Ver v1 seção 3.1 para a matriz completa; ela não muda entre modos.
+
+---
+
+## 5. SISTEMA DE DRAFT
+
+Sem alterações estruturais em relação à v1 — 8 giros, roubo de atributos de lendas, diferença Amador/Pro na variância. **Aplica-se igualmente aos dois modos** (o draft é sempre manual, independente do Modo Rápido/Longo, pois é rápido e é o "gancho" inicial do jogo).
+
+Fórmula de valor roubado:
+```
+valor_roubado = round(clamp(normal(mu, sigma), min, max))
+```
+- Amador: `mu=12, sigma=3, min=5, max=20`
+- Pro: `mu=10, sigma=6, min=1, max=25`
+
+---
+
+## 6. SISTEMA DE TREINAMENTO *(exclusivo Modo Longo)*
+
+### 6.1 Ciclo de treino
+
+A cada bloco de treino (recomendado: semanal, agrupado em "semanas de treino" entre blocos de jogos), o jogador aloca um orçamento de **pontos de foco** (ex: 10 pontos) entre até 3 áreas:
+
+- Atributos técnicos (Finalização, Passe, Drible, Defesa, Ritmo, Físico, Reflexos)
+- Recuperação/Descanso (reduz fadiga e risco de lesão, mas não desenvolve atributos)
+- Tática do time (melhora adequação ao esquema do técnico, ver seção 7)
+
+### 6.2 Fórmula de ganho de atributo
+
+```
+ganho = pontos_alocados * fator_idade * (Foco/99) * fator_diminishing_returns
+fator_diminishing_returns = 1 - (atributo_atual / 99)^2
+```
+- Isso significa: atributos baixos evoluem rápido, atributos já altos (perto de 99) evoluem devagar — cria trade-off real de "polir pontos fortes vs consertar fraquezas".
+- `fator_idade` segue a mesma curva da seção 7.3 da v1 (ganho maior aos 16-20, quase nulo depois dos 33).
+
+### 6.3 Overtraining (risco de exagero)
+
+Se o jogador alocar treino técnico pesado por muitas semanas seguidas sem alocar Recuperação, a fadiga acumulada aumenta a **chance-base de lesão** (seção 8) e pode gerar uma pequena penalidade temporária na Nota do Jogo (fadiga afeta `ModificadorFisico`, ver v1 seção 7.1). O jogo deve avisar visualmente quando a fadiga estiver em zona de risco, sem impedir a escolha — é uma decisão do jogador assumir o risco.
+
+---
+
+## 7. RELAÇÃO COM O TÉCNICO *(exclusivo Modo Longo)*
+
+### 7.1 Índice de confiança do técnico (0-100)
+
+```
+ConfiancaTecnico = 0.35*MediaNotasRecentes + 0.25*AdequacaoTatica
+                 + 0.20*Disciplina + 0.20*RelacaoPessoal
+```
+
+- **AdequacaoTatica**: quão bem o perfil de atributos do jogador serve ao esquema tático escolhido pelo técnico (cada técnico gerado tem uma preferência: ex: "posse de bola", "contra-ataque", "pressão alta") — investir em Tática no treino (seção 6.1) melhora esse valor diretamente.
+- **Disciplina**: cartões, atrasos, polêmicas em redes sociais (seção 10) reduzem esse valor.
+- **RelacaoPessoal**: evolui por eventos de "conversa com o técnico" (mini-decisões: pedir mais minutos, aceitar posição alternativa, questionar decisões publicamente ou não).
+
+### 7.2 Efeitos da Confiança do Técnico
+
+- Determina a chance de ser titular vs reserva a cada bloco de jogos (seção 9.2).
+- Confiança muito baixa por temporadas seguidas pode gerar evento de "pedido de transferência forçado" pelo próprio jogo (o técnico empurra o atleta para fora do elenco).
+- Confiança muito alta destrava eventos positivos: braçadeira de capitão (seção 9.3), indicação para renovação de contrato facilitada.
+
+### 7.3 Eventos de conversa com o técnico
+
+Periodicamente (ex: quando o jogador está insatisfeito com minutos, ou após uma sequência ruim), surge um evento de decisão:
+
+| Opção | Efeito |
+|---|---|
+| Pedir explicações com respeito | + RelacaoPessoal leve, sem risco |
+| Cobrar publicamente (vaza pra imprensa) | Risco de −ConfiancaTecnico forte, mas +Fama/apoio da torcida se o jogador tiver razão (nota alta, pouco tempo de jogo) |
+| Aceitar a decisão em silêncio | Neutro, mas Temperamento pode cair um pouco por frustração acumulada |
+| Pedir para ser negociado | Abre um evento de transferência antecipado |
+
+---
+
+## 8. SISTEMA DE LESÕES DETALHADO *(exclusivo Modo Longo — versão simplificada roda no Modo Rápido apenas como evento raro sem escolha)*
+
+### 8.1 Chance-base de lesão por bloco de jogos
+
+```
+ChanceLesao = base_por_idade * modificador_fadiga * modificador_fisico_atributo
+            * modificador_pressao_cronica (v1 seção 6.4) * modificador_overtraining (seção 6.3)
+```
+
+### 8.2 Tipos de lesão (severidade)
+
+| Tipo | Tempo afastado | Efeito ao retornar |
+|---|---|---|
+| Leve (contusão, entorse) | 1-2 blocos | Pequena queda de forma temporária |
+| Moderada (lesão muscular) | 3-6 blocos | Queda de forma + risco de reincidência maior por algumas semanas |
+| Grave (ligamento, fratura) | 8-16 blocos (pode cruzar temporada) | Queda de Físico permanente pequena, exige "arco de recuperação" |
+| Career-threatening (rara, gerada só em condições extremas de negligência) | Temporada inteira ou aposentadoria forçada | Evento narrativo dedicado, com opção de tentar retorno "por amor ao jogo" com risco alto |
+
+### 8.3 Decisão de retorno (Modo Longo)
+
+Ao se aproximar do fim do prazo de recuperação, o jogador escolhe:
+- **Retorno conservador** (espera 100% da recuperação): sem risco extra.
+- **Retorno antecipado** (volta antes do previsto, ex: jogo importante próximo): ganho de Fama/aprovação da torcida se der certo, mas risco elevado de reincidência ou agravamento.
+
+Esse é um dos pontos onde **Pressão e Lesão se cruzam diretamente** — jogos decisivos próximos aumentam a tentação (e a cobrança da imprensa) para o retorno antecipado.
+
+---
+
+## 9. VESTIÁRIO E ELENCO *(exclusivo Modo Longo)*
+
+Sistema que dá peso a "fazer parte de um time", não só a estatísticas individuais.
+
+### 9.1 Concorrência pela posição
+
+Cada posição no elenco tem 1-2 concorrentes diretos gerados com seu próprio Overall. A cada bloco de jogos, o técnico decide quem joga com base em `ConfiancaTecnico` relativa entre os concorrentes. Perder a titularidade para um concorrente gera evento de decisão (aceitar a concorrência de forma profissional, pedir transferência, cobrar o técnico).
+
+### 9.2 Rotação e Minutos
+
+```
+StatusElenco = Titular | Rotação | Reserva
+```
+- Titular: joga a maioria dos blocos, ganha Forma e Fama normalmente.
+- Rotação: joga cerca de metade, ganho de Forma reduzido, Pressão da torcida menor.
+- Reserva: joga raramente; Forma decai lentamente por inatividade; risco de pedido de transferência gerado automaticamente se prolongado por muitas temporadas.
+
+### 9.3 Liderança e braçadeira de capitão
+
+Se `Liderança` e `ConfiancaTecnico` estiverem altos por tempo suficiente, o jogador pode receber a braçadeira de capitão — isso aumenta o peso do atleta nos eventos de vestiário (pode "acalmar" ou "motivar" o time antes de jogos de alta pressão, com efeito pequeno mas real no `ModificadorForma` coletivo do time naquele jogo) e nas negociações de contrato (seção 11).
+
+### 9.4 Mentoria de jovens
+
+Periodicamente, o jogo oferece a opção de mentorar uma promessa da base. Se aceito, o jovem evolui um pouco mais rápido, e o atleta ganha `Liderança` e uma pequena "dívida narrativa" (o jovem pode reaparecer anos depois como companheiro de seleção ou até como jornalista/comentarista fazendo referência a você).
+
+---
+
+## 10. REDES SOCIAIS *(exclusivo Modo Longo — camada complementar à Imprensa da v1)*
+
+Diferente dos jornalistas persistentes (v1, seção 5), Redes Sociais é uma camada **mais rápida, mais volátil e mais arriscada**, controlada em parte pelo próprio jogador.
+
+- Após eventos marcantes, o jogador pode optar por postar algo (ou não postar nada — o silêncio também é uma escolha válida e às vezes a mais segura).
+- Opções de post variam por tom (celebração humilde, provocação a rival, resposta a crítica, apoio a causa social) e geram reação simulada de torcida/imprensa em poucos "turnos" (curto prazo, ao contrário da manchete de jornalista que é mais lenta e duradoura).
+- Risco de **controvérsia viral**: posts provocativos têm chance de "viralizar" fora de controle, gerando pico de Pressão e evento obrigatório de resposta pública (pedido de desculpas, manter posição, deletar o post) — cada opção tem trade-off entre Fama, ConfiancaTecnico e Torcida.
+- Serve como o principal gerador de eventos rápidos de Fama entre partidas grandes, mantendo o jogo "vivo" nos períodos mais parados da temporada.
+
+---
+
+## 11. CONTRATO E SALÁRIO *(exclusivo Modo Longo)*
+
+### 11.1 Estrutura do contrato
+
+```typescript
+interface Contrato {
+  salarioAnual: number;
+  duracaoAnos: number;
+  clausulaRescisao: number;
+  bonusPorObjetivo: Record<string, number>; // ex: "titulo_liga": 50000
+  humorAgente: number; // 0-100, afeta agressividade nas negociações
+}
+```
+
+### 11.2 Gatilho de renovação
+
+Dispara automaticamente quando restam ~12-18 meses de contrato (ajustável). O jogador negocia com 3 alavancas: salário pedido, duração desejada, e cláusula de rescisão. A resposta do clube depende de:
+
+```
+ChanceAceite = 0.4*DesempenhoRecente + 0.3*ForcaClube_vs_MercadoDoJogador
+             + 0.2*RelacaoComDiretoria + 0.1*Fama
+```
+
+- Pedir muito acima do que o desempenho sustenta gera risco de recusa e pode **azedar** `ExpectativaDiretoria` (v1, seção 6.1) mesmo que o jogador continue no clube.
+- Recusar a proposta do clube pode abrir pedido de transferência ou, em caso de fim de contrato sem acordo, saída livre (sem valor de venda para o clube, mas total liberdade de escolha de destino).
+
+### 11.3 Retroalimentação com Pressão
+
+Salário acima da média do elenco aumenta diretamente `ExpectativaDiretoria` e `ExpectativaTorcida` na fórmula de Pressão (v1, seção 6.1) — contratos "grandes" tornam a vida mais difícil, não só mais confortável. Isso deve ficar explícito para o jogador na tela de negociação ("salários mais altos aumentam a cobrança sobre você").
+
+---
+
+## 12. OBJETIVOS DA DIRETORIA *(ambos os modos, mais detalhado no Longo)*
+
+No início de cada temporada, a diretoria do clube define 1-3 metas explícitas, proporcionais à força do clube:
+
+- Clube pequeno: "evitar rebaixamento", "terminar no meio da tabela".
+- Clube médio: "classificar para copa continental secundária", "chegar às quartas da copa nacional".
+- Clube grande: "vencer a liga nacional", "chegar às semis da copa continental principal".
+
+Ao fim da temporada, cumprir/superar gera bônus (Fama, pequeno bônus salarial pontual, `ConfiancaTecnico`/`ExpectativaDiretoria` melhoram); falhar gera multa narrativa (aumento de Pressão na pré-temporada seguinte, risco de o clube buscar substitutos no mercado, o que pode ameaçar o `StatusElenco`, seção 9.2). No Modo Longo, o jogador pode negociar levemente as metas na pré-temporada (barganhar uma meta mais realista custando parte da confiança inicial da diretoria).
+
+---
+
+## 13. PÓS-CARREIRA *(exclusivo Modo Longo)*
+
+Na aposentadoria, o jogador escolhe um caminho, que gera uma "segunda tela de resultado" além do tier de jogador:
+
+- **Técnico**: usa `Liderança` acumulada como base de um novo "overall de treinador" — puramente narrativo/cosmético na v1, mas deixado como gancho de expansão futura (ex: modo carreira de técnico).
+- **Comentarista/Jornalista**: usa `Carisma` e `Fama` acumuladas — gera um epílogo narrativo com "manchetes" retrospectivas sobre a própria carreira, escritas no estilo dos jornalistas que acompanharam o atleta.
+- **Empresário/Investidor**: usa Fama acumulada para um resultado financeiro pós-carreira fictício, sem impacto mecânico, só de fechamento de história.
+- **Embaixador do clube/seleção**: disponível só se `ConfiancaTecnico` e títulos foram altos — o clube usa o nome do atleta institucionalmente.
+
+Essa escolha não afeta o Tier final (seção 15), é puramente um epílogo — mas deve ser calculada e mostrada, pois fecha o arco emocional da carreira.
+
+---
+
+## 14. SIMULAÇÃO DE TEMPORADA (integração dos novos sistemas)
+
+Mantém a estrutura da v1 (Nível Efetivo, Nota do Jogo, curva de idade, gols/assistências via Poisson — ver v1 seções 7.1 a 7.5), com os seguintes modificadores adicionais no Modo Longo:
+
+```
+NivelEfetivo = OverallPosicao
+             * ModificadorForma
+             * ModificadorPressao
+             * ModificadorIdade
+             * ModificadorFisico (fadiga + lesão)
+             * ModificadorTecnico   (baseado em ConfiancaTecnico e AdequacaoTatica — novo)
+             * ModificadorElenco    (bônus pequeno se Titular vs Reserva — novo)
+             + ruido_aleatorio
+```
+
+`ModificadorTecnico` e `ModificadorElenco` retornam a `1.0` neutro quando o Modo Rápido está ativo (esses sistemas não existem nele).
+
+---
+
+## 15. SUBSTITUIÇÃO EM JOGO IMPORTANTE *(sistema pedido explicitamente — detalhado)*
+
+Este é um Momento Decisivo especial (complementa v1 seção 6.3), que ocorre quando: o jogo tem `ContextoCompeticao` alto (clássico, final, decisão), a Nota do Jogo do atleta está abaixo de um limiar até aquele ponto da partida, e o técnico decide substituir.
+
+### 15.1 Cálculo da decisão de substituição
+
+```
+ChanceSubstituicao = base_por_contexto * (1 - NotaAtualNormalizada) * (1 - ConfiancaTecnico/150)
+```
+Quanto maior a confiança do técnico no atleta, menor a chance de ser tirado mesmo jogando mal — dá peso real a ter construído boa relação ao longo da carreira.
+
+### 15.2 Evento de reação à substituição
+
+Quando o jogador é substituído em um jogo de alto contexto, surge decisão imediata:
+
+| Reação | Efeito |
+|---|---|
+| Aplaudir o banco, sair com profissionalismo | + RelacaoPessoal com técnico, neutro em Fama |
+| Sair visivelmente irritado (expressão, gesto) | Risco de manchete negativa (v1 seção 5.2) e leve queda em ConfiancaTecnico, mas pode gerar apoio de parte da torcida se o jogador "tinha razão" (nota estava alta antes da queda) |
+| Reclamar publicamente depois (entrevista pós-jogo) | Reabre o Sistema de Imprensa (v1, seção 5.3) com um evento de entrevista extra, tom mais tenso |
+| Conversa reservada com o técnico no dia seguinte | Ativa o evento da seção 7.3, com contexto emocional elevado (mais risco e mais recompensa que a versão padrão) |
+
+Esse momento deve ser tratado como um dos "beats" narrativos mais fortes do jogo — é onde Pressão, Imprensa, Vestiário e Relação com Técnico se cruzam de uma vez.
+
+---
+
+## 16. TIERS FINAIS DE CARREIRA (fórmula atualizada)
+
+Mantém os 11 tiers da v1, mas a fórmula de pontuação final ganha um componente de Legado, que só é totalmente calculável no Modo Longo (no Modo Rápido, usa uma aproximação sem os dados de vestiário/liderança):
+
+```
+ScoreFinal = 0.22*PicoOverall + 0.22*TitulosPonderados + 0.18*PremiosIndividuais
+           + 0.13*Longevidade + 0.13*FamaMediaCarreira + 0.12*Legado
+
+Legado = 0.5*LiderancaAcumulada + 0.3*QuantidadeDeJovensMentorados + 0.2*ConfiancaTecnicoMediaCarreira
+```
+
+No Modo Rápido, `Legado` é aproximado apenas por `FamaMediaCarreira` (peso redistribuído entre os outros componentes), já que os sistemas de vestiário não rodam nesse modo.
+
+---
+
+## 17. DETERMINISMO E REPRODUTIBILIDADE
+
+Mantém a lógica da v1: RNG com seed (mulberry32/xorshift), nunca `Math.random()` puro, código de carreira reproduzível ao final. **Importante**: como o Modo Longo tem muito mais pontos de decisão do jogador, o "código de carreira" precisa registrar não só a seed, mas um log compacto de todas as escolhas manuais (treino, conversas com técnico, negociações, reações a substituição, posts de rede social) para permitir replay fiel.
+
+---
+
+## 18. ARQUITETURA TÉCNICA ATUALIZADA
+
+**Stack:** mantém React + TypeScript + Tailwind, estado no client (localStorage), RNG isolado em módulo próprio — ver v1 seção 12 para os princípios gerais.
+
+**Estrutura de pastas atualizada:**
+```
+/src
+  /engine
+    rng.ts
+    attributes.ts
+    positions.ts
+    draft.ts
+    matchSimulation.ts
+    seasonSimulation.ts
+    pressureSystem.ts
+    pressSystem.ts
+    socialMediaSystem.ts      (novo)
+    trainingSystem.ts         (novo)
+    coachRelationship.ts      (novo)
+    injurySystem.ts           (novo)
+    contractSystem.ts         (novo)
+    dressingRoomSystem.ts     (novo)
+    substitutionEvents.ts     (novo)
+    boardObjectives.ts        (novo)
+    postCareer.ts             (novo)
+    awards.ts
+    tiers.ts
+    autoResolve.ts            (novo — versões automáticas dos sistemas do Longo para o Modo Rápido)
+  /data
+    legends.json
+    positionWeights.json
+    clubs.json
+    journalistTemplates.json
+    headlineFragments.json
+    socialPostTemplates.json  (novo)
+    coachProfiles.json        (novo — estilos táticos)
+  /components
+    ModeSelect.tsx            (novo)
+    DraftScreen.tsx
+    PositionSelect.tsx
+    TrainingScreen.tsx         (novo, só Modo Longo)
+    CoachConversation.tsx      (novo, só Modo Longo)
+    ContractNegotiation.tsx    (novo, só Modo Longo)
+    InjuryRecovery.tsx         (novo, só Modo Longo)
+    SubstitutionEvent.tsx      (novo)
+    SocialMediaPost.tsx        (novo, só Modo Longo)
+    SeasonSummary.tsx
+    InterviewEvent.tsx
+    LiveFinal.tsx
+    PostCareerChoice.tsx       (novo, só Modo Longo)
+    CareerResult.tsx
+  /state
+    careerStore.ts
+  /types
+    Player.ts
+    Club.ts
+    Coach.ts                   (novo)
+    Contract.ts                (novo)
+    Journalist.ts
+    SeasonRecord.ts
+```
+
+### 18.1 Schema atualizado do jogador
+
+```typescript
+interface Player {
+  id: string;
+  seedCarreira: string;
+  modo: "rapido" | "completo";
+  atributos: Record<string, number>; // inclui foco e lideranca
+  posicao: string;
+  idade: number;
+  overall: number;
+  fama: number;
+  temperamento: number;
+  carisma: number;
+  foco: number;
+  lideranca: number;
+  fadiga: number;                    // novo
+  statusElenco: "titular" | "rotacao" | "reserva"; // novo
+  clubeAtual: string;
+  contrato: Contrato;                // novo
+  confiancaTecnico: number;          // novo
+  historicoTemporadas: SeasonRecord[];
+  jornalistas: Journalist[];
+  premios: string[];
+  jovensMentorados: number;          // novo
+  logDeDecisoes: DecisionLogEntry[]; // novo — para reprodutibilidade no Modo Longo
+}
+```
+
+---
+
+## 19. ROADMAP DE IMPLEMENTAÇÃO (fases atualizadas)
+
+1. **Fase 1 — Núcleo compartilhado:** RNG, atributos, matriz de posições, draft, escolha de posição, escolha de modo (mesmo que Modo Longo ainda não tenha telas extras funcionando).
+2. **Fase 2 — Simulação básica:** motor de partida/temporada, curva de idade, clubes, estatísticas — funcional nos dois modos.
+3. **Fase 3 — Imprensa (v1):** jornalistas persistentes, manchetes, entrevistas, Fama.
+4. **Fase 4 — Pressão (v1) + Substituição em jogo decisivo (seção 15):** curva de desempenho, momentos decisivos, Temperamento, evento de substituição.
+5. **Fase 5 — Sistemas do Modo Longo, parte 1:** Treinamento, Relação com Técnico, Rotação/Minutos.
+6. **Fase 6 — Sistemas do Modo Longo, parte 2:** Lesões detalhadas, Contrato/Salário, Objetivos da Diretoria.
+7. **Fase 7 — Sistemas do Modo Longo, parte 3:** Vestiário/Liderança/Mentoria, Redes Sociais.
+8. **Fase 8 — `autoResolve()` para o Modo Rápido:** garantir que todo sistema do Modo Longo tenha uma versão automática coerente, para os dois modos compartilharem o mesmo engine sem duplicar lógica.
+9. **Fase 9 — Competições, seleção, prêmios, finais ao vivo** (mantém v1 seções 8 e finais).
+10. **Fase 10 — Tiers finais, Pós-carreira e card de resultado.**
+11. **Fase 11 — Polimento:** balanceamento via simulação em lote (rodar milhares de carreiras automáticas nos dois modos), ajuste de curvas, UI/UX, responsividade mobile.
+
+---
+
+## 20. INSTRUÇÃO FINAL PARA O AGENTE
+
+Construa primeiro o núcleo compartilhado (Fases 1-4) com os dois modos já selecionáveis desde o início, mesmo que o Modo Longo ainda rode com os sistemas avançados "desligados"/automáticos — isso evita retrabalho de arquitetura depois. Cada sistema novo do Modo Longo (Treinamento, Técnico, Lesão, Contrato, Vestiário, Redes Sociais, Objetivos da Diretoria, Pós-carreira) deve ser implementado como módulo isolado em `/engine`, com uma função de resolução manual (usada quando Modo Longo + interação do jogador) e uma função `autoResolve()` equivalente (usada no Modo Rápido) — nunca duplique a lógica de cálculo entre as duas, apenas a fonte da decisão (jogador vs sistema) deve mudar. Todo texto gerado (manchetes, posts, falas do técnico, negociações) deve vir de bancos de fragmentos combináveis em `/data`, nunca hardcoded em componentes. Priorize funcionalidade e clareza da lógica sobre polimento visual nas primeiras fases — a UI pode (e deve) ser refinada por último, depois que o motor de simulação estiver validado por testes em lote.
