@@ -10,3 +10,5 @@ The original spec (attached_assets) describes a much larger game with injuries, 
 **How to apply:** if the user asks for contracts, injuries, or social-media features later, treat them as net-new additions to `artifacts/jornada/src/engine/engine.ts` and `types.ts`, not bug fixes to existing behavior.
 
 **Update:** Added injury system (chance-based, reduces games played, shown in season summary) and contract negotiation (renewal + rival club offers when contract expires) plus a persistent StatusBar header across in-career screens. Still missing from full spec: dressing-room dynamics, social media, detailed post-career content.
+
+**Update 2:** Added dressing-room dynamics (relacaoElenco stat, harmony/conflict events based on temperamento/lideranca/carisma) and social media buzz (viral posts as manchetes with fonte "redes-sociais", affects fama). Still missing: detailed post-career content (hall of fame, historical stats).

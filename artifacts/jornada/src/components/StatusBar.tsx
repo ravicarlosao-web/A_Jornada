@@ -33,6 +33,7 @@ export function StatusBar({ jogador }: { jogador: Jogador }) {
           <span>Temporada {temporada}</span>
           <Indicador label="Fama" valor={jogador.fama} />
           <Indicador label="Confiança" valor={jogador.confiancaTecnico} />
+          <Indicador label="Elenco" valor={jogador.relacaoElenco} />
           <Indicador label="Fadiga" valor={jogador.fadiga} invertido />
         </div>
       </div>

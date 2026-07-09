@@ -56,8 +56,24 @@ export function ResumoTemporadaScreen({
         </div>
       )}
 
+      {registro.eventoVestiario && (
+        <div
+          className={`rounded-xl border p-4 text-center ${
+            registro.eventoVestiario.tipo === "harmonia"
+              ? "border-primary bg-primary/10"
+              : "border-destructive bg-destructive/10"
+          }`}
+        >
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Vestiário</p>
+          <p className="mt-1 font-semibold">{registro.eventoVestiario.texto}</p>
+        </div>
+      )}
+
       {registro.manchetes.map((m) => (
         <div key={m.id} className="rounded-xl border p-4 italic text-muted-foreground">
+          <span className="mr-2 not-italic text-xs uppercase tracking-wide text-muted-foreground/70">
+            {m.fonte === "redes-sociais" ? "📱 redes sociais" : "📰 imprensa"}
+          </span>
           "{m.texto}"
         </div>
       ))}

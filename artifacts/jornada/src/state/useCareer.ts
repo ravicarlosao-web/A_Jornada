@@ -267,6 +267,7 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     fama: resultado.famaAtualizada,
     confiancaTecnico: resultado.confiancaTecnicoAtualizada,
     fadiga: resultado.fadigaAtualizada,
+    relacaoElenco: resultado.relacaoElencoAtualizada,
     historicoTemporadas: [...prev.jogador.historicoTemporadas, resultado.registro],
     premios,
   };

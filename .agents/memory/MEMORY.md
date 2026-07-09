@@ -1,1 +1,1 @@
-- [Jornada MVP scope](jornada-scope.md) — football career sim; draft/position/season-loop/tiers/injuries/contracts done; social-media/dressing-room/post-career still missing from full spec.
+- [Jornada MVP scope](jornada-scope.md) — football career sim; draft/position/season-loop/tiers/injuries/contracts/dressing-room/social-media done; post-career content still missing from full spec.

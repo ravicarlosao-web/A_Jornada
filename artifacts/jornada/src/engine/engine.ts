@@ -7,12 +7,17 @@ import {
   MANCHETES_NEGATIVAS,
   MANCHETES_NEUTRAS,
   DESCRICOES_LESAO,
+  EVENTOS_VESTIARIO_HARMONIA,
+  EVENTOS_VESTIARIO_CONFLITO,
+  POSTS_REDES_SOCIAIS_POSITIVOS,
+  POSTS_REDES_SOCIAIS_NEGATIVOS,
 } from "./data";
 import type {
   Atributos,
   AtributosBase,
   Clube,
   Dificuldade,
+  EventoVestiario,
   FocoTreino,
   Jogador,
   Lesao,
@@ -147,6 +152,7 @@ export function criarJogador(params: {
     premios: [],
     jovensMentorados: 0,
     aposentado: false,
+    relacaoElenco: 50,
   };
 }
 
@@ -172,6 +178,7 @@ export interface ResultadoTemporada {
   famaAtualizada: number;
   confiancaTecnicoAtualizada: number;
   fadigaAtualizada: number;
+  relacaoElencoAtualizada: number;
 }
 
 export function simularTemporada(params: {
@@ -300,7 +307,49 @@ export function simularTemporada(params: {
       temporada: numeroTemporada,
       texto: `${jogador.nome} sofre lesão: ${lesao.descricao} e desfalca o time por semanas`,
       tom: "negativa",
+      fonte: "imprensa",
     });
+  }
+
+  let relacaoElenco = jogador.relacaoElenco;
+  let eventoVestiario: EventoVestiario | null = null;
+  const chanceHarmonia = rng.clamp(0.15 + jogador.atributos.lideranca / 300 + jogador.atributos.carisma / 400, 0.1, 0.5);
+  const chanceConflito = rng.clamp(0.1 + (100 - jogador.atributos.temperamento) / 300 + (statusElenco === "reserva" ? 0.08 : 0), 0.05, 0.4);
+  const rolVestiario = rng.random();
+  if (rolVestiario < chanceConflito) {
+    const impacto = -Math.round(rng.range(5, 15));
+    eventoVestiario = {
+      tipo: "conflito",
+      texto: rng.pick(EVENTOS_VESTIARIO_CONFLITO).replace("{nome}", jogador.nome),
+      impactoRelacao: impacto,
+    };
+    relacaoElenco = rng.clamp(relacaoElenco + impacto, 0, 100);
+    confiancaTecnico = rng.clamp(confiancaTecnico - 4, 0, 100);
+  } else if (rolVestiario > 1 - chanceHarmonia) {
+    const impacto = Math.round(rng.range(4, 12));
+    eventoVestiario = {
+      tipo: "harmonia",
+      texto: rng.pick(EVENTOS_VESTIARIO_HARMONIA).replace("{nome}", jogador.nome),
+      impactoRelacao: impacto,
+    };
+    relacaoElenco = rng.clamp(relacaoElenco + impacto, 0, 100);
+  } else {
+    relacaoElenco = rng.clamp(relacaoElenco + rng.range(-2, 2), 0, 100);
+  }
+
+  const chanceViral = rng.clamp((fama / 200) + (notaMedia >= 7.5 ? 0.25 : notaMedia <= 5.5 ? 0.2 : 0.05), 0.05, 0.6);
+  if (rng.random() < chanceViral) {
+    const positivo = notaMedia >= 6.5;
+    manchetes.push({
+      id: `${numeroTemporada}-redes`,
+      temporada: numeroTemporada,
+      texto: rng
+        .pick(positivo ? POSTS_REDES_SOCIAIS_POSITIVOS : POSTS_REDES_SOCIAIS_NEGATIVOS)
+        .replace("{nome}", jogador.nome),
+      tom: positivo ? "positiva" : "negativa",
+      fonte: "redes-sociais",
+    });
+    fama = rng.clamp(fama + (positivo ? 3 : -2), 0, 100);
   }
 
   const registro: RegistroTemporada = {
@@ -318,6 +367,8 @@ export function simularTemporada(params: {
     manchetes,
     statusElenco,
     lesao,
+    eventoVestiario,
+    relacaoElenco,
   };
 
   return {
@@ -326,6 +377,7 @@ export function simularTemporada(params: {
     famaAtualizada: fama,
     confiancaTecnicoAtualizada: confiancaTecnico,
     fadigaAtualizada,
+    relacaoElencoAtualizada: relacaoElenco,
   };
 }
 

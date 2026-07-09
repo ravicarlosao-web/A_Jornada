@@ -75,3 +75,31 @@ export const DESCRICOES_LESAO: Record<"leve" | "moderada" | "grave", string[]> =
   moderada: ["Lesionou o joelho em disputa de bola", "Sofreu uma lesão muscular na coxa"],
   grave: ["Rompeu o ligamento e passou por cirurgia", "Sofreu fratura e ficou meses fora dos gramados"],
 };
+
+export const EVENTOS_VESTIARIO_HARMONIA = [
+  "{nome} organiza uma confraternização e aproxima o grupo",
+  "{nome} vira referência para os mais jovens no vestiário",
+  "Elenco elogia a liderança e o espírito de equipe de {nome}",
+  "{nome} media um desentendimento entre companheiros e fortalece o grupo",
+];
+
+export const EVENTOS_VESTIARIO_CONFLITO = [
+  "{nome} discute com um companheiro após derrota e o clima esquenta",
+  "Vazamento na imprensa expõe atrito entre {nome} e o elenco",
+  "{nome} é acusado de individualismo por colegas de time",
+  "Bastidores revelam tensão entre {nome} e a comissão técnica",
+];
+
+export const POSTS_REDES_SOCIAIS_POSITIVOS = [
+  "Vídeo do gol de {nome} viraliza e ultrapassa milhões de visualizações",
+  "#{nome}ÉCraque bomba nas redes após atuação decisiva",
+  "Torcedores enchem {nome} de elogios nas redes sociais após a partida",
+  "{nome} ganha milhares de seguidores após semana de destaque",
+];
+
+export const POSTS_REDES_SOCIAIS_NEGATIVOS = [
+  "{nome} vira meme nas redes sociais após falha na partida",
+  "Hashtag pedindo saída de {nome} viraliza entre torcedores",
+  "Comentário polêmico de {nome} nas redes gera repercussão negativa",
+  "{nome} é criticado em massa por torcedores após resultado ruim",
+];

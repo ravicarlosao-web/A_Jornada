@@ -39,6 +39,13 @@ export interface Manchete {
   temporada: number;
   texto: string;
   tom: "positiva" | "negativa" | "neutra";
+  fonte?: "imprensa" | "redes-sociais";
+}
+
+export interface EventoVestiario {
+  tipo: "conflito" | "harmonia";
+  texto: string;
+  impactoRelacao: number;
 }
 
 export interface Lesao {
@@ -62,6 +69,8 @@ export interface RegistroTemporada {
   manchetes: Manchete[];
   statusElenco?: "titular" | "rotacao" | "reserva";
   lesao?: Lesao | null;
+  eventoVestiario?: EventoVestiario | null;
+  relacaoElenco?: number;
 }
 
 export interface Contrato {
@@ -94,6 +103,7 @@ export interface Jogador {
   premios: string[];
   jovensMentorados: number;
   aposentado: boolean;
+  relacaoElenco: number;
 }
 
 export interface FocoTreino {
