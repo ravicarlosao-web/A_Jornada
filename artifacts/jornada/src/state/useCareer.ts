@@ -48,6 +48,26 @@ export type Fase =
 
 const STORAGE_KEY = "jornada-carreira-v1";
 
+/** Preenche campos novos ausentes em saves antigos (localStorage) com valores padrão seguros. */
+function normalizarJogador(jogador: Jogador): Jogador {
+  const overallAprox = calcularOverall(jogador.atributos, jogador.posicao);
+  return {
+    ...jogador,
+    contrato: {
+      ...jogador.contrato,
+      clausulas: jogador.contrato.clausulas ?? {
+        multaRescisoria: Math.round(jogador.contrato.salarioAnual * 4),
+        bonusPorGol: 1000,
+        luvas: Math.round(jogador.contrato.salarioAnual * 0.15),
+      },
+    },
+    rival: jogador.rival ?? { nome: "Rival Desconhecido", overall: overallAprox, vitorias: 0, derrotas: 0 },
+    convocacoesSelecao: jogador.convocacoesSelecao ?? 0,
+    titulosSelecao: jogador.titulosSelecao ?? [],
+    patrocinios: jogador.patrocinios ?? [],
+  };
+}
+
 interface EstadoJogo {
   fase: Fase;
   modo: Modo | null;
@@ -95,17 +115,18 @@ export function useCareer() {
       try {
         const parsed = JSON.parse(salvo) as { jogador: Jogador };
         if (parsed.jogador && !parsed.jogador.aposentado) {
+          const jogadorNormalizado = normalizarJogador(parsed.jogador);
           setEstado((prev) => ({
             ...prev,
             fase: "resumo-temporada",
-            jogador: parsed.jogador,
-            modo: parsed.jogador.modo,
-            dificuldade: parsed.jogador.dificuldade,
-            numeroTemporada: parsed.jogador.historicoTemporadas.length,
+            jogador: jogadorNormalizado,
+            modo: jogadorNormalizado.modo,
+            dificuldade: jogadorNormalizado.dificuldade,
+            numeroTemporada: jogadorNormalizado.historicoTemporadas.length,
             ultimoRegistro:
-              parsed.jogador.historicoTemporadas[parsed.jogador.historicoTemporadas.length - 1] ?? null,
+              jogadorNormalizado.historicoTemporadas[jogadorNormalizado.historicoTemporadas.length - 1] ?? null,
           }));
-          if (parsed.jogador.historicoTemporadas.length === 0) {
+          if (jogadorNormalizado.historicoTemporadas.length === 0) {
             setEstado((prev) => ({ ...prev, fase: "pre-temporada" }));
           }
         }

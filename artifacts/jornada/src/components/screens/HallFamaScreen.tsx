@@ -1,4 +1,5 @@
-import { lerHallDaFama } from "@/state/hallDaFama";
+import { useEffect, useState } from "react";
+import { buscarHallDaFamaGlobal, lerHallDaFama, type EntradaHallFama } from "@/state/hallDaFama";
 
 const NOME_POSICAO: Record<string, string> = {
   GOL: "Goleiro",
@@ -8,14 +9,30 @@ const NOME_POSICAO: Record<string, string> = {
 };
 
 export function HallFamaScreen({ onVoltar }: { onVoltar: () => void }) {
-  const entradas = lerHallDaFama();
+  const [entradas, setEntradas] = useState<EntradaHallFama[]>(() => lerHallDaFama());
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    let ativo = true;
+    buscarHallDaFamaGlobal().then((globais) => {
+      if (ativo) {
+        setEntradas(globais);
+        setCarregando(false);
+      }
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-16">
       <div className="text-center">
         <h1 className="text-3xl font-bold">Hall da Fama</h1>
         <p className="mt-2 text-muted-foreground">
-          As melhores carreiras já disputadas nesta jornada.
+          {carregando
+            ? "Sincronizando com o ranking global..."
+            : "As melhores carreiras já disputadas, deste dispositivo e de outros jogadores."}
         </p>
       </div>
 
