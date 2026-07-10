@@ -87,6 +87,7 @@ interface EstadoJogo {
   epilogoPosCarreira: string | null;
   mensagemConversaTecnico: string | null;
   propostaPatrocinioPendente: Patrocinio | null;
+  ultimoFocoTreino: FocoTreino | null;
 }
 
 const MAX_RODADAS_DRAFT = 8;
@@ -109,6 +110,7 @@ function estadoInicial(): EstadoJogo {
     epilogoPosCarreira: null,
     mensagemConversaTecnico: null,
     propostaPatrocinioPendente: null,
+    ultimoFocoTreino: null,
   };
 }
 
@@ -229,7 +231,7 @@ export function useCareer() {
         if (!prev.jogador) return prev;
         const atributosTreinados = aplicarTreino(prev.jogador.atributos, foco, prev.jogador.idade);
         const jogadorAtualizado = { ...prev.jogador, atributos: atributosTreinados };
-        return simularEAtualizar({ ...prev, jogador: jogadorAtualizado }, rng);
+        return simularEAtualizar({ ...prev, jogador: jogadorAtualizado, ultimoFocoTreino: foco }, rng);
       });
     },
     [rng],

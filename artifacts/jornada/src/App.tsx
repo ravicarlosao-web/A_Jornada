@@ -70,7 +70,13 @@ function App() {
         <PreTemporadaScreen jogador={estado.jogador} onAvancar={avancarDaPreTemporada} />
       )}
 
-      {estado.fase === "treino" && <TreinoScreen onConfirmar={confirmarTreino} />}
+      {estado.fase === "treino" && estado.jogador && (
+        <TreinoScreen
+          jogador={estado.jogador}
+          ultimoFocoTreino={estado.ultimoFocoTreino}
+          onConfirmar={confirmarTreino}
+        />
+      )}
 
       {estado.fase === "resumo-temporada" && estado.ultimoRegistro && (
         <ResumoTemporadaScreen
