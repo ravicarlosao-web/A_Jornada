@@ -1,8 +1,9 @@
 import { useCareer } from "@/state/useCareer";
 import { StatusBar } from "@/components/StatusBar";
+import { SideMenu } from "@/components/SideMenu";
 import { ModoScreen } from "@/components/screens/ModoScreen";
 import { DificuldadeScreen } from "@/components/screens/DificuldadeScreen";
-import { DraftScreen } from "@/components/screens/DraftScreen";
+import { BaseScreen } from "@/components/screens/BaseScreen";
 import { PosicaoScreen } from "@/components/screens/PosicaoScreen";
 import { PreTemporadaScreen } from "@/components/screens/PreTemporadaScreen";
 import { TreinoScreen } from "@/components/screens/TreinoScreen";
@@ -14,16 +15,34 @@ import { ConversaTecnicoScreen } from "@/components/screens/ConversaTecnicoScree
 import { PatrocinioScreen } from "@/components/screens/PatrocinioScreen";
 import { PartidaAoVivoScreen } from "@/components/screens/PartidaAoVivoScreen";
 import { LojaScreen } from "@/components/screens/LojaScreen";
+import { TelefoneScreen } from "@/components/screens/TelefoneScreen";
+import { OutrasLigasScreen } from "@/components/screens/OutrasLigasScreen";
+import { MercadoTransferenciasScreen } from "@/components/screens/MercadoTransferenciasScreen";
+import { PatrociniosViewScreen } from "@/components/screens/PatrociniosViewScreen";
 
 const FASES_COM_STATUSBAR = new Set([
   "pre-temporada",
   "treino",
   "loja",
+  "telefone",
+  "patrocinios-view",
+  "outras-ligas",
+  "mercado-transferencias",
   "partida-ao-vivo",
   "resumo-temporada",
   "contrato",
   "conversa-tecnico",
   "patrocinio",
+]);
+
+const FASES_COM_MENU = new Set([
+  "pre-temporada",
+  "treino",
+  "resumo-temporada",
+  "contrato",
+  "conversa-tecnico",
+  "patrocinio",
+  "partida-ao-vivo",
 ]);
 
 function App() {
@@ -32,6 +51,7 @@ function App() {
     iniciarNovaCarreira,
     escolherModo,
     escolherDificuldade,
+    escolherBase,
     escolherOpcaoDraft,
     escolherPosicao,
     avancarDaPreTemporada,
@@ -49,26 +69,37 @@ function App() {
     fecharLoja,
     comprarNaLoja,
     abrirConversaTecnico,
+    abrirTelefone,
+    abrirPatrocinios,
+    abrirOutrasLigas,
+    abrirMercadoTransferencias,
+    fecharMenuScreen,
   } = useCareer();
 
   const mostrarStatusBar = estado.jogador && FASES_COM_STATUSBAR.has(estado.fase);
+  const mostrarMenu = estado.jogador && FASES_COM_MENU.has(estado.fase);
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground [background-image:radial-gradient(circle_at_top,_hsl(var(--primary)/0.08),_transparent_55%)]">
       {mostrarStatusBar && estado.jogador && <StatusBar jogador={estado.jogador} />}
 
+      {mostrarMenu && estado.jogador && (
+        <SideMenu
+          jogador={estado.jogador}
+          onAbrirTelefone={abrirTelefone}
+          onAbrirLoja={abrirLoja}
+          onAbrirPatrocinios={abrirPatrocinios}
+          onAbrirOutrasLigas={abrirOutrasLigas}
+          onAbrirMercado={abrirMercadoTransferencias}
+        />
+      )}
+
       {estado.fase === "inicio" && <ModoScreen onEscolher={escolherModo} />}
 
       {estado.fase === "dificuldade" && <DificuldadeScreen onEscolher={escolherDificuldade} />}
 
-      {estado.fase === "draft" && (
-        <DraftScreen
-          rodada={estado.rodadaDraft}
-          totalRodadas={8}
-          opcoes={estado.opcoesDraftAtuais}
-          atributos={estado.atributosDraft}
-          onEscolher={escolherOpcaoDraft}
-        />
+      {estado.fase === "base" && (
+        <BaseScreen onEscolher={escolherBase} />
       )}
 
       {estado.fase === "posicao" && (
@@ -91,6 +122,22 @@ function App() {
           onComprar={comprarNaLoja}
           onFechar={fecharLoja}
         />
+      )}
+
+      {estado.fase === "telefone" && estado.jogador && (
+        <TelefoneScreen jogador={estado.jogador} onFechar={fecharMenuScreen} />
+      )}
+
+      {estado.fase === "patrocinios-view" && estado.jogador && (
+        <PatrociniosViewScreen jogador={estado.jogador} onFechar={fecharMenuScreen} />
+      )}
+
+      {estado.fase === "outras-ligas" && estado.jogador && (
+        <OutrasLigasScreen jogador={estado.jogador} onFechar={fecharMenuScreen} />
+      )}
+
+      {estado.fase === "mercado-transferencias" && estado.jogador && (
+        <MercadoTransferenciasScreen jogador={estado.jogador} onFechar={fecharMenuScreen} />
       )}
 
       {estado.fase === "treino" && estado.jogador && (

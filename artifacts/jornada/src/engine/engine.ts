@@ -29,6 +29,7 @@ import {
 import type {
   Atributos,
   AtributosBase,
+  Base,
   ClausulasContrato,
   Clube,
   ConversaTecnicoOpcaoId,
@@ -114,6 +115,83 @@ export function aplicarEscolhaDraft(atributos: Atributos, escolha: OpcaoDraft): 
   const atual = atributos[escolha.atributo];
   const novo = Math.min(99, atual + escolha.valor);
   return { ...atributos, [escolha.atributo]: novo };
+}
+
+// ─── Sistema de Base ──────────────────────────────────────────────────────────
+
+export const BASES: Base[] = [
+  {
+    id: "rua",
+    nome: "Rua",
+    descricao: "As ruas ensinaram mais do que qualquer academia. Criatividade e malícia no DNA.",
+    historia: "Cresceu tocando bola descalço no asfalto, onde só sobrevive quem tem técnica e astúcia.",
+    bonus: { ritmo: 15, drible: 18, finalizacao: 10, carisma: 8 },
+    corPrimaria: "#f97316",
+    icone: "🏙️",
+  },
+  {
+    id: "escolinha",
+    nome: "Escolinha de Clube",
+    descricao: "Formado nos padrões técnicos de uma base profissional. Disciplina e fundamentos sólidos.",
+    historia: "Desde os 8 anos dentro de uma estrutura de clube, aprendendo a jogar no sistema.",
+    bonus: { passe: 16, finalizacao: 12, foco: 12, drible: 8 },
+    corPrimaria: "#3b82f6",
+    icone: "🏟️",
+  },
+  {
+    id: "varzea",
+    nome: "Várzea",
+    descricao: "A dureza do campo de barro forjou um guerreiro. Físico e determinação inabalável.",
+    historia: "Fim de semana de domingo no campo alagado, jogando por amor puro ao futebol.",
+    bonus: { fisico: 18, finalizacao: 14, defesa: 10, temperamento: 10 },
+    corPrimaria: "#84cc16",
+    icone: "⛏️",
+  },
+  {
+    id: "futsal",
+    nome: "Futsal",
+    descricao: "A velocidade e técnica do futsal moldaram reflexos únicos. Rápido como o pensamento.",
+    historia: "Anos de quadra desenvolveram habilidade técnica e visão de jogo acima da média.",
+    bonus: { drible: 18, passe: 14, ritmo: 12, reflexos: 8 },
+    corPrimaria: "#a855f7",
+    icone: "⚡",
+  },
+  {
+    id: "europa",
+    nome: "Academia Europeia",
+    descricao: "Treinamento de elite desde jovem em solo europeu. Visão tática e técnica refinada.",
+    historia: "Revelado por olheiro e mandado para uma academia europeia aos 14 anos.",
+    bonus: { passe: 16, reflexos: 14, defesa: 12, foco: 10 },
+    corPrimaria: "#0ea5e9",
+    icone: "🌍",
+  },
+  {
+    id: "praia",
+    nome: "Futebol de Praia",
+    descricao: "O beach soccer deu equilíbrio, espetáculo e carisma. Futebol bonito no sangue.",
+    historia: "Cresceu nas areias, onde o drible e o show fazem parte da cultura do jogo.",
+    bonus: { ritmo: 14, drible: 16, finalizacao: 12, carisma: 10 },
+    corPrimaria: "#f59e0b",
+    icone: "🏖️",
+  },
+];
+
+export function criarAtributosComBase(base: Base): Atributos {
+  const attrs = criarAtributosBase();
+  const novo: Record<string, number> = { ...attrs };
+  for (const [attr, valor] of Object.entries(base.bonus)) {
+    novo[attr] = Math.min(99, (novo[attr] ?? 0) + (valor as number));
+  }
+  return novo as unknown as Atributos;
+}
+
+export function overallLabel(overall: number): { texto: string; cor: string } {
+  if (overall >= 95) return { texto: "Lenda do Futebol", cor: "#f59e0b" };
+  if (overall >= 90) return { texto: "Estrela", cor: "#a855f7" };
+  if (overall >= 80) return { texto: "Craque", cor: "#22c55e" };
+  if (overall >= 70) return { texto: "Acima da Média", cor: "#3b82f6" };
+  if (overall >= 50) return { texto: "Médio", cor: "#94a3b8" };
+  return { texto: "Fraco", cor: "#ef4444" };
 }
 
 const PESOS_POSICAO: Record<Posicao, Partial<Record<keyof AtributosBase, number>>> = {

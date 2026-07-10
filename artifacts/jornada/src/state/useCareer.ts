@@ -6,7 +6,7 @@ import {
   calcularOverall,
   calcularTierFinal,
   comprarItemLoja,
-  criarAtributosBase,
+  criarAtributosComBase,
   criarJogador,
   definirStatusElenco,
   fmt,
@@ -23,6 +23,7 @@ import { MANCHETES_PATROCINIO } from "@/engine/data";
 import { salvarNoHallDaFama } from "@/state/hallDaFama";
 import type {
   Atributos,
+  Base,
   ConversaTecnicoOpcaoId,
   Dificuldade,
   FocoTreino,
@@ -41,11 +42,15 @@ export type Fase =
   | "inicio"
   | "modo"
   | "dificuldade"
-  | "draft"
+  | "base"
   | "posicao"
   | "pre-temporada"
   | "treino"
   | "loja"
+  | "telefone"
+  | "patrocinios-view"
+  | "outras-ligas"
+  | "mercado-transferencias"
   | "partida-ao-vivo"
   | "resumo-temporada"
   | "conversa-tecnico"
@@ -84,6 +89,7 @@ interface EstadoJogo {
   fase: Fase;
   modo: Modo | null;
   dificuldade: Dificuldade | null;
+  baseEscolhida: Base | null;
   atributosDraft: Atributos;
   rodadaDraft: number;
   opcoesDraftAtuais: OpcaoDraft[];
@@ -98,6 +104,7 @@ interface EstadoJogo {
   propostaPatrocinioPendente: Patrocinio | null;
   ultimoFocoTreino: FocoTreino | null;
   faseAnteriorLoja: Fase | null;
+  faseAnteriorMenu: Fase | null;
   mensagemLoja: string | null;
   conversaVoluntaria: boolean;
   transferenciaSolicitadaNestaTemporada: boolean;
@@ -111,7 +118,8 @@ function estadoInicial(): EstadoJogo {
     fase: "inicio",
     modo: null,
     dificuldade: null,
-    atributosDraft: criarAtributosBase(),
+    baseEscolhida: null,
+    atributosDraft: { ritmo: 20, finalizacao: 20, passe: 20, drible: 20, defesa: 20, fisico: 20, reflexos: 20, temperamento: 45, carisma: 40, foco: 45, lideranca: 20 },
     rodadaDraft: 0,
     opcoesDraftAtuais: [],
     jogador: null,
@@ -125,6 +133,7 @@ function estadoInicial(): EstadoJogo {
     propostaPatrocinioPendente: null,
     ultimoFocoTreino: null,
     faseAnteriorLoja: null,
+    faseAnteriorMenu: null,
     mensagemLoja: null,
     conversaVoluntaria: false,
     transferenciaSolicitadaNestaTemporada: false,
@@ -181,14 +190,20 @@ export function useCareer() {
 
   const escolherDificuldade = useCallback(
     (dificuldade: Dificuldade) => {
-      setEstado((prev) => {
-        const opcoes = gerarOpcoesDraft(rng, dificuldade);
-        return { ...prev, dificuldade, rodadaDraft: 1, opcoesDraftAtuais: opcoes, fase: "draft" };
-      });
+      setEstado((prev) => ({ ...prev, dificuldade, fase: "base" }));
     },
-    [rng],
+    [],
   );
 
+  const escolherBase = useCallback(
+    (base: Base) => {
+      const atributos = criarAtributosComBase(base);
+      setEstado((prev) => ({ ...prev, baseEscolhida: base, atributosDraft: atributos, fase: "posicao" }));
+    },
+    [],
+  );
+
+  // kept for legacy saves that may reference it, but no longer called from UI
   const escolherOpcaoDraft = useCallback(
     (opcao: OpcaoDraft) => {
       setEstado((prev) => {
@@ -198,12 +213,7 @@ export function useCareer() {
           return { ...prev, atributosDraft: novosAtributos, fase: "posicao" };
         }
         const opcoes = gerarOpcoesDraft(rng, prev.dificuldade ?? "amador");
-        return {
-          ...prev,
-          atributosDraft: novosAtributos,
-          rodadaDraft: proximaRodada,
-          opcoesDraftAtuais: opcoes,
-        };
+        return { ...prev, atributosDraft: novosAtributos, rodadaDraft: proximaRodada, opcoesDraftAtuais: opcoes };
       });
     },
     [rng],
@@ -227,6 +237,40 @@ export function useCareer() {
     },
     [rng],
   );
+
+  const FASES_MENU: Fase[] = ["pre-temporada", "treino", "resumo-temporada", "partida-ao-vivo", "contrato", "conversa-tecnico", "patrocinio"];
+
+  const abrirTelefone = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      return { ...prev, faseAnteriorMenu: prev.fase, fase: "telefone" };
+    });
+  }, []);
+
+  const abrirPatrocinios = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      return { ...prev, faseAnteriorMenu: prev.fase, fase: "patrocinios-view" };
+    });
+  }, []);
+
+  const abrirOutrasLigas = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      return { ...prev, faseAnteriorMenu: prev.fase, fase: "outras-ligas" };
+    });
+  }, []);
+
+  const abrirMercadoTransferencias = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      return { ...prev, faseAnteriorMenu: prev.fase, fase: "mercado-transferencias" };
+    });
+  }, []);
+
+  const fecharMenuScreen = useCallback(() => {
+    setEstado((prev) => ({ ...prev, fase: prev.faseAnteriorMenu ?? "pre-temporada", faseAnteriorMenu: null }));
+  }, []);
 
   const avancarDaPreTemporada = useCallback(
     (mentorarJovemDaBase?: boolean) => {
@@ -473,6 +517,7 @@ export function useCareer() {
     iniciarNovaCarreira,
     escolherModo,
     escolherDificuldade,
+    escolherBase,
     escolherOpcaoDraft,
     escolherPosicao,
     avancarDaPreTemporada,
@@ -490,6 +535,11 @@ export function useCareer() {
     fecharLoja,
     comprarNaLoja,
     abrirConversaTecnico,
+    abrirTelefone,
+    abrirPatrocinios,
+    abrirOutrasLigas,
+    abrirMercadoTransferencias,
+    fecharMenuScreen,
   };
 }
 

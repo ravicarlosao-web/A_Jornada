@@ -3,6 +3,18 @@ export type Dificuldade = "amador" | "pro";
 
 export type Posicao = "GOL" | "ZAG" | "MEI" | "ATA";
 
+export type BaseId = "rua" | "escolinha" | "varzea" | "futsal" | "europa" | "praia";
+
+export interface Base {
+  id: BaseId;
+  nome: string;
+  descricao: string;
+  historia: string;
+  bonus: Partial<Record<keyof AtributosBase, number>> & Partial<Record<keyof AtributosOcultos, number>>;
+  corPrimaria: string;
+  icone: string;
+}
+
 export interface AtributosBase {
   ritmo: number;
   finalizacao: number;

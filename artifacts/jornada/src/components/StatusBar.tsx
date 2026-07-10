@@ -1,4 +1,4 @@
-import { calcularOverall } from "@/engine/engine";
+import { calcularOverall, overallLabel } from "@/engine/engine";
 import type { Jogador } from "@/engine/types";
 import { User, Activity, Star, Calendar, Shield, Trophy, Target, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 export function StatusBar({ jogador }: { jogador: Jogador }) {
   const overall = calcularOverall(jogador.atributos, jogador.posicao);
   const temporada = jogador.historicoTemporadas.length + 1;
+
+  const label = overallLabel(overall);
 
   return (
     <motion.div 
@@ -27,11 +29,16 @@ export function StatusBar({ jogador }: { jogador: Jogador }) {
           </div>
           <div>
             <p className="font-display text-xl leading-none text-foreground">{jogador.nome}</p>
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-1">
-              <span className="text-accent">{jogador.clubeAtual.nome}</span>
-              <span>·</span>
-              {jogador.idade} anos
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <span className="text-accent">{jogador.clubeAtual.nome}</span>
+                <span>·</span>
+                {jogador.idade} anos
+              </p>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: label.cor, backgroundColor: `${label.cor}20` }}>
+                {label.texto}
+              </span>
+            </div>
           </div>
         </div>
 
