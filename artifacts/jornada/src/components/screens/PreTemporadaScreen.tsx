@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Jogador } from "@/engine/types";
+import { motion } from "framer-motion";
+import { CalendarDays, Trophy, UserPlus, Play } from "lucide-react";
 
 export function PreTemporadaScreen({
   jogador,
@@ -14,55 +16,73 @@ export function PreTemporadaScreen({
   const podeMentorar = jogador.modo === "completo" && jogador.idade >= 24;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-4 py-16 text-center">
-      <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          Temporada {temporadaNumero} — {jogador.idade} anos
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="mx-auto flex max-w-3xl flex-col items-center gap-10 px-4 py-16"
+    >
+      <div className="text-center">
+        <span className="inline-block rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-primary mb-4">
+          Temporada {temporadaNumero} • {jogador.idade} Anos
+        </span>
+        <h1 className="font-display text-5xl uppercase tracking-wide">
+          Pré-Temporada no <span className="text-accent">{jogador.clubeAtual.nome}</span>
+        </h1>
+        <p className="mt-4 text-muted-foreground max-w-xl mx-auto leading-relaxed">
+          A diretoria, a comissão técnica e a torcida estão de olho na sua preparação. 
+          {contratoRestante <= 1 && <span className="text-destructive font-semibold ml-1">Seu contrato expira ao final desta temporada.</span>}
         </p>
-        <h1 className="mt-1 text-3xl font-bold">Pré-temporada no {jogador.clubeAtual.nome}</h1>
       </div>
 
-      <p className="text-muted-foreground">
-        A diretoria do {jogador.clubeAtual.nome} está de olho na sua evolução nesta temporada.
-        {contratoRestante <= 1 && " Seu contrato está próximo do fim — uma nova negociação se aproxima."}
-      </p>
-
-      <div className="grid w-full grid-cols-2 gap-4">
-        <div className="rounded-xl border p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Contrato</p>
-          <p className="mt-1 text-lg font-bold">
-            {contratoRestante} {contratoRestante === 1 ? "ano restante" : "anos restantes"}
+      <div className="grid w-full grid-cols-2 gap-6">
+        <div className="flex flex-col items-center justify-center rounded-none clip-diagonal border border-white/10 bg-card p-8 text-center">
+          <CalendarDays className="mb-3 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Tempo de Contrato</p>
+          <p className="mt-2 font-sports text-4xl text-foreground">
+            {contratoRestante} {contratoRestante === 1 ? "ANO" : "ANOS"}
           </p>
         </div>
-        <div className="rounded-xl border p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Prêmios na carreira</p>
-          <p className="mt-1 text-lg font-bold">{jogador.premios.length}</p>
+        <div className="flex flex-col items-center justify-center rounded-none clip-diagonal border border-white/10 bg-card p-8 text-center">
+          <Trophy className="mb-3 h-8 w-8 text-accent/50" />
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Prêmios na Carreira</p>
+          <p className="mt-2 font-sports text-4xl text-accent">
+            {jogador.premios.length}
+          </p>
         </div>
       </div>
 
       {podeMentorar && (
-        <label className="flex w-full cursor-pointer items-start gap-3 rounded-xl border p-4 text-left hover-elevate">
-          <input
-            type="checkbox"
-            checked={mentorar}
-            onChange={(e) => setMentorar(e.target.checked)}
-            className="mt-1"
-          />
-          <span>
-            <span className="block font-medium">Mentorar um jovem da base</span>
-            <span className="block text-sm text-muted-foreground">
-              Investe seu tempo em uma promessa do clube. Você ganha Liderança e deixa uma marca no vestiário.
-            </span>
-          </span>
+        <label className={`w-full cursor-pointer overflow-hidden rounded-none clip-diagonal border p-6 transition-all ${mentorar ? 'border-primary bg-primary/10' : 'border-white/10 bg-card hover:border-white/30'}`}>
+          <div className="flex items-start gap-4">
+            <input
+              type="checkbox"
+              checked={mentorar}
+              onChange={(e) => setMentorar(e.target.checked)}
+              className="peer sr-only"
+            />
+            <div
+              aria-hidden="true"
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border mt-1 peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background ${mentorar ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground'}`}
+            >
+              {mentorar && <UserPlus size={14} />}
+            </div>
+            <div>
+              <span className="block font-display text-2xl uppercase">Mentorar Promessa da Base</span>
+              <span className="mt-2 block text-sm text-muted-foreground leading-relaxed">
+                Invista seu tempo livre orientando um jovem atleta. Você ganhará atributos de liderança e melhorará sua relação com o elenco, mas sacrificará parte do seu descanso.
+              </span>
+            </div>
+          </div>
         </label>
       )}
 
       <button
         onClick={() => onAvancar(mentorar)}
-        className="hover-elevate active-elevate-2 rounded-md bg-primary px-8 py-3 font-semibold text-primary-foreground"
+        className="group relative flex w-full sm:w-auto items-center justify-center gap-3 overflow-hidden rounded-none clip-diagonal bg-primary px-12 py-5 font-bold uppercase tracking-widest text-primary-foreground transition-transform hover:scale-105 active:scale-95"
       >
-        {jogador.modo === "completo" ? "Ir para treino" : "Iniciar temporada"}
+        <span>{jogador.modo === "completo" ? "Avançar para Treinos" : "Iniciar Temporada"}</span>
+        <Play size={18} className="fill-current transition-transform group-hover:translate-x-1" />
       </button>
-    </div>
+    </motion.div>
   );
 }

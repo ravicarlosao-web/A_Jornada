@@ -2,6 +2,8 @@ import { useState } from "react";
 import { calcularOverall, calcularTierFinal } from "@/engine/engine";
 import type { Jogador } from "@/engine/types";
 import { HallFamaScreen } from "@/components/screens/HallFamaScreen";
+import { motion } from "framer-motion";
+import { Trophy, RefreshCw, Bookmark, Goal, Activity, Shield, Users } from "lucide-react";
 
 const NOME_POSICAO: Record<string, string> = {
   GOL: "Goleiro",
@@ -20,118 +22,142 @@ export function ResultadoFinalScreen({
   epilogo?: string | null;
 }) {
   const [mostrarHallFama, setMostrarHallFama] = useState(false);
+  
+  if (mostrarHallFama) {
+    return <HallFamaScreen onVoltar={() => setMostrarHallFama(false)} />;
+  }
+
   const { tier, score } = calcularTierFinal(jogador);
   const overall = calcularOverall(jogador.atributos, jogador.posicao);
   const totalGols = jogador.historicoTemporadas.reduce((acc, t) => acc + t.gols, 0);
   const totalAssist = jogador.historicoTemporadas.reduce((acc, t) => acc + t.assistencias, 0);
   const totalJogos = jogador.historicoTemporadas.reduce((acc, t) => acc + t.jogos, 0);
   const titulos = jogador.historicoTemporadas.filter((t) => t.objetivoCumprido).length;
+  
   const melhorTemporada = jogador.historicoTemporadas.reduce<
     (typeof jogador.historicoTemporadas)[number] | null
   >((melhor, atual) => (!melhor || atual.notaMedia > melhor.notaMedia ? atual : melhor), null);
 
-  if (mostrarHallFama) {
-    return <HallFamaScreen onVoltar={() => setMostrarHallFama(false)} />;
-  }
-
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-4 py-16 text-center">
-      <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          Fim de carreira — {jogador.nome} ({NOME_POSICAO[jogador.posicao]})
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-16"
+    >
+      {/* Header Profile Section */}
+      <div className="flex flex-col items-center text-center">
+        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+          Aposentadoria Oficial • {NOME_POSICAO[jogador.posicao]}
         </p>
-        <h1 className="mt-2 text-4xl font-bold text-primary">{tier.nome}</h1>
-        <p className="mt-2 text-muted-foreground">{tier.descricao}</p>
+        <h1 className="font-display text-6xl uppercase tracking-wide text-foreground mb-2">
+          {jogador.nome}
+        </h1>
+        <div className="inline-block mt-4 rounded-none border border-accent bg-accent/10 px-8 py-3 shadow-[0_0_30px_rgba(234,179,8,0.15)]">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-1">Status na História</p>
+          <p className="font-display text-4xl text-accent">{tier.nome}</p>
+        </div>
+        <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed italic">
+          "{tier.descricao}"
+        </p>
       </div>
 
-      <div className="grid w-full grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Pontuação" value={score} />
-        <Stat label="Overall final" value={overall} />
-        <Stat label="Temporadas" value={jogador.historicoTemporadas.length} />
-        <Stat label="Objetivos cumpridos" value={titulos} />
-        <Stat label="Jogos" value={totalJogos} />
-        <Stat label="Gols" value={totalGols} />
-        <Stat label="Assistências" value={totalAssist} />
-        <Stat label="Prêmios" value={jogador.premios.length} />
-        <Stat label="Convocações seleção" value={jogador.convocacoesSelecao} />
-        <Stat label="Títulos pela seleção" value={jogador.titulosSelecao.length} />
-        <Stat label="Patrocínios" value={jogador.patrocinios.length} />
+      {/* Main Score & Core Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard icon={<Trophy />} label="Score Final" value={score} highlight />
+        <StatCard icon={<Activity />} label="Overall Máximo" value={overall} />
+        <StatCard icon={<Goal />} label="Gols na Carreira" value={totalGols} />
+        <StatCard icon={<Users />} label="Jogos Disputados" value={totalJogos} />
       </div>
 
-      {epilogo && (
-        <div className="w-full rounded-xl border border-primary/40 bg-primary/5 p-4 text-left">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Pós-carreira</p>
-          <p className="mt-1 text-sm leading-relaxed">{epilogo}</p>
-        </div>
-      )}
+      <div className="grid md:grid-cols-2 gap-8">
+        {/* Story Section */}
+        <div className="flex flex-col gap-4">
+          {epilogo && (
+            <div className="flex-1 rounded-none border border-white/10 bg-card p-8">
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary mb-4">
+                <Bookmark size={16} /> O Dia Seguinte
+              </h3>
+              <p className="text-muted-foreground leading-relaxed text-sm md:text-base">
+                {epilogo}
+              </p>
+            </div>
+          )}
 
-      {melhorTemporada && (
-        <div className="w-full rounded-xl border border-primary bg-primary/10 p-4 text-left">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Melhor temporada</p>
-          <p className="mt-1 font-semibold">
-            Temporada {melhorTemporada.temporada} ({melhorTemporada.idade} anos) — {melhorTemporada.clube}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {melhorTemporada.gols} gols, {melhorTemporada.assistencias} assistências, nota média{" "}
-            {melhorTemporada.notaMedia.toFixed(1)}
-          </p>
+          {melhorTemporada && (
+            <div className="rounded-none border border-secondary/30 bg-secondary/5 p-8">
+              <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-secondary mb-4">
+                <Shield size={16} /> Temporada de Ouro
+              </h3>
+              <p className="font-display text-2xl uppercase mb-1">
+                {melhorTemporada.clube} <span className="text-muted-foreground text-xl">({melhorTemporada.idade} anos)</span>
+              </p>
+              <div className="mt-4 flex gap-6 text-sm">
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nota</span>
+                  <span className="font-sports text-2xl">{melhorTemporada.notaMedia.toFixed(1)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Gols</span>
+                  <span className="font-sports text-2xl">{melhorTemporada.gols}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Assist.</span>
+                  <span className="font-sports text-2xl">{melhorTemporada.assistencias}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      {jogador.historicoTemporadas.length > 0 && (
-        <div className="w-full overflow-x-auto rounded-xl border">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2">Temp.</th>
-                <th className="px-3 py-2">Idade</th>
-                <th className="px-3 py-2">Clube</th>
-                <th className="px-3 py-2">Jogos</th>
-                <th className="px-3 py-2">Gols</th>
-                <th className="px-3 py-2">Assist.</th>
-                <th className="px-3 py-2">Nota</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jogador.historicoTemporadas.map((t) => (
-                <tr key={t.temporada} className="border-b last:border-0">
-                  <td className="px-3 py-2">{t.temporada}</td>
-                  <td className="px-3 py-2">{t.idade}</td>
-                  <td className="px-3 py-2">{t.clube}</td>
-                  <td className="px-3 py-2">{t.jogos}</td>
-                  <td className="px-3 py-2">{t.gols}</td>
-                  <td className="px-3 py-2">{t.assistencias}</td>
-                  <td className="px-3 py-2">{t.notaMedia.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Detailed Stats */}
+        <div className="rounded-none border border-white/10 bg-black/40 p-6">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">Raio-X da Carreira</h3>
+          <div className="space-y-4">
+            <DetailRow label="Temporadas Jogadas" value={jogador.historicoTemporadas.length} />
+            <DetailRow label="Títulos Conquistados" value={titulos} />
+            <DetailRow label="Assistências Totais" value={totalAssist} />
+            <DetailRow label="Prêmios Individuais" value={jogador.premios.length} />
+            <DetailRow label="Convocações Nacionais" value={jogador.convocacoesSelecao} />
+            <DetailRow label="Títulos pela Seleção" value={jogador.titulosSelecao.length} />
+            <DetailRow label="Patrocínios Assinados" value={jogador.patrocinios.length} />
+          </div>
         </div>
-      )}
+      </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+      {/* Action Buttons */}
+      <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
         <button
           onClick={onNovaCarreira}
-          className="hover-elevate active-elevate-2 rounded-md bg-primary px-8 py-3 font-semibold text-primary-foreground"
+          className="flex items-center justify-center gap-2 rounded-none clip-diagonal bg-primary px-8 py-5 font-bold uppercase tracking-widest text-primary-foreground transition-all hover:bg-primary/90"
         >
-          Começar nova jornada
+          <RefreshCw size={18} /> Nova Jornada
         </button>
         <button
           onClick={() => setMostrarHallFama(true)}
-          className="hover-elevate active-elevate-2 rounded-md border px-8 py-3 font-semibold"
+          className="flex items-center justify-center gap-2 rounded-none clip-diagonal border border-white/20 bg-card px-8 py-5 font-bold uppercase tracking-widest text-foreground transition-all hover:bg-white/10"
         >
-          Ver Hall da Fama
+          <Trophy size={18} /> Hall da Fama
         </button>
       </div>
+    </motion.div>
+  );
+}
+
+function StatCard({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: string | number; highlight?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center justify-center border p-6 text-center ${highlight ? 'border-accent bg-accent/10 text-accent' : 'border-white/10 bg-card text-foreground'}`}>
+      <div className="mb-3 opacity-50">{icon}</div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">{label}</p>
+      <p className="font-sports text-5xl leading-none">{value}</p>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function DetailRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border p-4">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+    <div className="flex justify-between items-end border-b border-white/5 pb-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <span className="font-sports text-2xl leading-none">{value}</span>
     </div>
   );
 }

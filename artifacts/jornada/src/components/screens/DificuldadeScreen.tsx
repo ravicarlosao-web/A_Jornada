@@ -1,32 +1,73 @@
 import type { Dificuldade } from "@/engine/types";
+import { motion } from "framer-motion";
+import { Medal, Flame, ChevronRight } from "lucide-react";
 
 export function DificuldadeScreen({ onEscolher }: { onEscolher: (d: Dificuldade) => void }) {
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-4 py-16 text-center">
-      <div>
-        <h1 className="text-3xl font-bold">Escolha a dificuldade</h1>
-        <p className="mt-2 text-muted-foreground">Isso afeta a variação de qualidade no draft de atributos.</p>
-      </div>
-      <div className="grid w-full gap-4 sm:grid-cols-2">
+    <motion.div 
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="mx-auto flex min-h-[80vh] max-w-4xl flex-col justify-center gap-12 px-4 py-16 text-center"
+    >
+      <motion.div variants={item}>
+        <p className="text-sm font-medium uppercase tracking-widest text-primary mb-2">Preparação</p>
+        <h1 className="font-display text-5xl">Escolha a Dificuldade</h1>
+        <p className="mt-4 text-muted-foreground max-w-lg mx-auto">
+          A dificuldade afeta os tetos e os pisos durante o draft de atributos da lenda.
+        </p>
+      </motion.div>
+      
+      <motion.div variants={item} className="grid w-full gap-6 sm:grid-cols-2">
         <button
           onClick={() => onEscolher("amador")}
-          className="hover-elevate active-elevate-2 rounded-xl border p-6 text-left"
+          className="group relative overflow-hidden rounded-none clip-diagonal border border-white/10 bg-card p-8 text-left transition-all hover:border-primary/50 hover:bg-card/60"
         >
-          <h2 className="text-xl font-semibold">Amador</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Draft mais previsível, ideal para iniciantes na jornada.
-          </p>
+          <div className="absolute top-0 right-0 p-6 opacity-5 transition-opacity group-hover:opacity-10 group-hover:text-primary">
+            <Medal size={80} strokeWidth={1} />
+          </div>
+          <div className="relative z-10">
+            <h2 className="font-display text-3xl">Amador</h2>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Draft equilibrado. Menos riscos de atributos muito baixos, porém tetos de atributos lendários também são limitados. Ideal para primeira viagem.
+            </p>
+            <div className="mt-6 flex items-center text-sm font-bold text-primary uppercase tracking-wider">
+              Selecionar <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-2" />
+            </div>
+          </div>
         </button>
+        
         <button
           onClick={() => onEscolher("pro")}
-          className="hover-elevate active-elevate-2 rounded-xl border p-6 text-left"
+          className="group relative overflow-hidden rounded-none clip-diagonal border border-white/10 bg-card p-8 text-left transition-all hover:border-destructive/50 hover:bg-card/60"
         >
-          <h2 className="text-xl font-semibold">Pro</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Mais risco e mais recompensa — atributos podem sair muito bons ou muito ruins.
-          </p>
+          <div className="absolute top-0 right-0 p-6 opacity-5 transition-opacity group-hover:opacity-10 group-hover:text-destructive">
+            <Flame size={80} strokeWidth={1} />
+          </div>
+          <div className="relative z-10">
+            <h2 className="font-display text-3xl text-destructive">Pro</h2>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              Alta volatilidade. Você pode draftar atributos absurdamente altos, mas também pode acabar com deficiências brutais que exigirão muito treino.
+            </p>
+            <div className="mt-6 flex items-center text-sm font-bold text-destructive uppercase tracking-wider">
+              Selecionar <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-2" />
+            </div>
+          </div>
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

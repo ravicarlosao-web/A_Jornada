@@ -1,4 +1,6 @@
 import type { RegistroTemporada } from "@/engine/types";
+import { motion } from "framer-motion";
+import { TrendingUp, AlertTriangle, MessageSquare, Shield, Landmark, Newspaper, ChevronRight } from "lucide-react";
 
 export function ResumoTemporadaScreen({
   registro,
@@ -11,131 +13,153 @@ export function ResumoTemporadaScreen({
   onAposentar: () => void;
   podeAposentar: boolean;
 }) {
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1 }
+    }
+  };
+
+  const item = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-16">
-      <div className="text-center">
-        <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-          Fim da temporada {registro.temporada} — {registro.idade} anos
+    <motion.div 
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="mx-auto flex max-w-4xl flex-col gap-8 px-4 py-16"
+    >
+      <motion.div variants={item} className="text-center mb-4">
+        <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
+          Fim da Temporada {registro.temporada} • {registro.idade} Anos
         </p>
-        <h1 className="mt-1 text-3xl font-bold">{registro.clube}</h1>
-      </div>
+        <h1 className="font-display text-5xl uppercase tracking-wide">{registro.clube}</h1>
+      </motion.div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* Main Stats Grid */}
+      <motion.div variants={item} className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Jogos" value={registro.jogos} />
-        <Stat label="Gols" value={registro.gols} />
+        <Stat label="Gols" value={registro.gols} highlight />
         <Stat label="Assistências" value={registro.assistencias} />
-        <Stat label="Nota média" value={registro.notaMedia.toFixed(1)} />
-      </div>
+        <Stat label="Nota Média" value={registro.notaMedia.toFixed(1)} />
+      </motion.div>
 
-      <div
-        className={`rounded-xl border p-4 ${
-          registro.objetivoCumprido ? "border-primary" : "border-destructive"
-        }`}
-      >
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Objetivo da diretoria</p>
-        <p className="mt-1 font-semibold">{registro.objetivo}</p>
-        <p className={`mt-1 text-sm ${registro.objetivoCumprido ? "text-primary" : "text-destructive"}`}>
-          {registro.objetivoCumprido ? "Cumprido ✓" : "Não cumprido"}
-        </p>
-      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Objective */}
+        <motion.div variants={item} className={`relative overflow-hidden rounded-none clip-diagonal border p-6 ${registro.objetivoCumprido ? "border-primary bg-primary/5" : "border-destructive bg-destructive/5"}`}>
+          <div className="absolute -right-4 -top-4 opacity-5">
+            <TrendingUp size={100} />
+          </div>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">Diretoria</p>
+          <p className="font-display text-2xl uppercase tracking-wide mb-3">{registro.objetivo}</p>
+          <div className={`inline-flex items-center text-xs font-bold uppercase tracking-widest px-3 py-1 ${registro.objetivoCumprido ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"}`}>
+            {registro.objetivoCumprido ? "Objetivo Alcançado" : "Falha na Missão"}
+          </div>
+        </motion.div>
 
-      {registro.premio && (
-        <div className="rounded-xl border border-primary bg-primary/10 p-4 text-center">
-          <p className="font-semibold">Prêmio conquistado: {registro.premio}</p>
-        </div>
-      )}
+        {/* Dynamic Events Area */}
+        <div className="flex flex-col gap-4">
+          {registro.premio && (
+            <motion.div variants={item} className="flex items-center gap-4 rounded-none border border-accent bg-accent/10 p-4">
+              <div className="bg-accent text-accent-foreground p-2 rounded-full shrink-0">
+                <Landmark size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent">Premiação Individual</p>
+                <p className="font-display text-xl uppercase tracking-wide">{registro.premio}</p>
+              </div>
+            </motion.div>
+          )}
 
-      {registro.lesao && (
-        <div className="rounded-xl border border-destructive bg-destructive/10 p-4 text-center">
-          <p className="font-semibold">
-            Lesão {registro.lesao.gravidade}: {registro.lesao.descricao}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {registro.lesao.jogosPerdidos} jogos perdidos por lesão
-          </p>
-        </div>
-      )}
+          {registro.lesao && (
+            <motion.div variants={item} className="flex items-center gap-4 rounded-none border border-destructive bg-destructive/10 p-4">
+              <div className="bg-destructive text-destructive-foreground p-2 rounded-full shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-destructive">Lesão {registro.lesao.gravidade}</p>
+                <p className="font-semibold text-sm">{registro.lesao.descricao}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{registro.lesao.jogosPerdidos} jogos perdidos</p>
+              </div>
+            </motion.div>
+          )}
 
-      {registro.eventoVestiario && (
-        <div
-          className={`rounded-xl border p-4 text-center ${
-            registro.eventoVestiario.tipo === "harmonia"
-              ? "border-primary bg-primary/10"
-              : "border-destructive bg-destructive/10"
-          }`}
-        >
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Vestiário</p>
-          <p className="mt-1 font-semibold">{registro.eventoVestiario.texto}</p>
-        </div>
-      )}
+          {registro.eventoVestiario && (
+            <motion.div variants={item} className={`flex items-center gap-4 rounded-none border p-4 ${registro.eventoVestiario.tipo === 'harmonia' ? 'border-primary bg-primary/5' : 'border-destructive bg-destructive/5'}`}>
+              <div className={`p-2 rounded-full shrink-0 ${registro.eventoVestiario.tipo === 'harmonia' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'}`}>
+                <MessageSquare size={20} />
+              </div>
+              <div>
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${registro.eventoVestiario.tipo === 'harmonia' ? 'text-primary' : 'text-destructive'}`}>Bastidores</p>
+                <p className="text-sm font-medium">{registro.eventoVestiario.texto}</p>
+              </div>
+            </motion.div>
+          )}
 
-      {registro.disputaRival && (
-        <div
-          className={`rounded-xl border p-4 text-center ${
-            registro.disputaRival === "venceu" ? "border-primary bg-primary/10" : "border-muted bg-muted/40"
-          }`}
-        >
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Disputa pela posição</p>
-          <p className="mt-1 font-semibold">
-            {registro.disputaRival === "venceu" ? "Você venceu a disputa interna" : "Você perdeu espaço na disputa interna"}
-          </p>
-        </div>
-      )}
-
-      {registro.convocadoSelecao && (
-        <div className="rounded-xl border border-primary bg-primary/10 p-4 text-center">
-          <p className="font-semibold">Convocado para a Seleção Nacional</p>
-          {registro.tituloSelecao && (
-            <p className="mt-1 text-sm text-primary">{registro.tituloSelecao} 🏆</p>
+          {registro.convocadoSelecao && (
+            <motion.div variants={item} className="flex items-center gap-4 rounded-none border border-secondary bg-secondary/10 p-4">
+              <div className="bg-secondary text-secondary-foreground p-2 rounded-full shrink-0">
+                <Shield size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-secondary">Seleção Nacional</p>
+                <p className="font-semibold text-sm">Convocado nesta temporada</p>
+                {registro.tituloSelecao && <p className="text-accent text-sm font-bold mt-0.5">{registro.tituloSelecao} Campeão</p>}
+              </div>
+            </motion.div>
           )}
         </div>
+      </div>
+
+      {/* Headlines Timeline */}
+      {registro.manchetes.length > 0 && (
+        <motion.div variants={item} className="mt-4">
+          <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground border-b border-white/10 pb-2">
+            <Newspaper size={16} /> Manchetes da Temporada
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {registro.manchetes.map((m) => (
+              <div key={m.id} className="relative pl-4 border-l-2 border-white/20 py-1">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {m.fonte === "redes-sociais" ? "Trending" : "Imprensa Local"}
+                </span>
+                <p className="font-display text-lg uppercase tracking-wide leading-tight text-foreground/90">"{m.texto}"</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
       )}
 
-      {registro.novoPatrocinio && (
-        <div className="rounded-xl border border-accent bg-accent/10 p-4 text-center">
-          <p className="font-semibold">Novo patrocínio: {registro.novoPatrocinio.marca}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {registro.novoPatrocinio.valorAnual.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-              maximumFractionDigits: 0,
-            })}{" "}
-            / ano de imagem
-          </p>
-        </div>
-      )}
-
-      {registro.manchetes.map((m) => (
-        <div key={m.id} className="rounded-xl border p-4 italic text-muted-foreground">
-          <span className="mr-2 not-italic text-xs uppercase tracking-wide text-muted-foreground/70">
-            {m.fonte === "redes-sociais" ? "📱 redes sociais" : "📰 imprensa"}
-          </span>
-          "{m.texto}"
-        </div>
-      ))}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+      {/* Actions */}
+      <motion.div variants={item} className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
         <button
           onClick={onContinuar}
-          className="hover-elevate active-elevate-2 rounded-md bg-primary px-8 py-3 font-semibold text-primary-foreground"
+          className="group flex w-full sm:w-auto items-center justify-center gap-2 rounded-none clip-diagonal bg-primary px-10 py-4 font-bold uppercase tracking-widest text-primary-foreground hover:bg-primary/90"
         >
-          Continuar carreira
+          Avançar Carreira <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
         </button>
         {podeAposentar && (
-          <button onClick={onAposentar} className="hover-elevate active-elevate-2 rounded-md border px-8 py-3 font-semibold">
-            Encerrar carreira
+          <button 
+            onClick={onAposentar} 
+            className="w-full sm:w-auto rounded-none border border-white/20 bg-transparent px-8 py-4 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          >
+            Anunciar Aposentadoria
           </button>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
-    <div className="rounded-xl border p-4 text-center">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-bold">{value}</p>
+    <div className={`flex flex-col items-center justify-center rounded-none clip-diagonal border p-6 text-center ${highlight ? 'border-primary/50 bg-primary/10' : 'border-white/10 bg-card'}`}>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={`mt-2 font-sports text-5xl leading-none ${highlight ? 'text-primary' : 'text-foreground'}`}>{value}</p>
     </div>
   );
 }

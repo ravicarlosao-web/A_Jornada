@@ -1,57 +1,75 @@
 import { calcularOverall } from "@/engine/engine";
 import type { Jogador } from "@/engine/types";
-
-const NOME_POSICAO: Record<string, string> = {
-  GOL: "Goleiro",
-  ZAG: "Zagueiro",
-  MEI: "Meio-campista",
-  ATA: "Atacante",
-};
+import { User, Activity, Star, Calendar, Shield, Trophy, Target } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function StatusBar({ jogador }: { jogador: Jogador }) {
   const overall = calcularOverall(jogador.atributos, jogador.posicao);
   const temporada = jogador.historicoTemporadas.length + 1;
 
   return (
-    <div className="sticky top-0 z-10 border-b bg-card/90 backdrop-blur">
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 text-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground">
-            {overall}
-          </span>
+    <motion.div 
+      initial={{ y: -50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="sticky top-0 z-50 border-b border-white/5 bg-card/80 backdrop-blur-xl shadow-lg"
+    >
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 text-sm">
+        
+        {/* Player Profile */}
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <span className="flex h-12 w-12 items-center justify-center rounded-none clip-diagonal bg-primary font-sports text-2xl text-primary-foreground shadow-[0_0_15px_rgba(34,197,94,0.3)]">
+              {overall}
+            </span>
+            <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-bold text-white ring-2 ring-background">
+              {jogador.posicao}
+            </div>
+          </div>
           <div>
-            <p className="font-semibold leading-tight">{jogador.nome}</p>
-            <p className="text-xs text-muted-foreground leading-tight">
-              {NOME_POSICAO[jogador.posicao]} · {jogador.idade} anos
+            <p className="font-display text-xl leading-none text-foreground">{jogador.nome}</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1 mt-1">
+              <span className="text-accent">{jogador.clubeAtual.nome}</span>
+              <span>·</span>
+              {jogador.idade} anos
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          <span>
-            <strong className="text-foreground">{jogador.clubeAtual.nome}</strong>
-          </span>
-          <span>Temporada {temporada}</span>
-          <Indicador label="Fama" valor={jogador.fama} />
-          <Indicador label="Confiança" valor={jogador.confiancaTecnico} />
-          <Indicador label="Elenco" valor={jogador.relacaoElenco} />
-          <Indicador label="Fadiga" valor={jogador.fadiga} invertido />
-          {jogador.convocacoesSelecao > 0 && (
-            <span>
-              Seleção: <strong className="text-foreground">{jogador.convocacoesSelecao}</strong>
-            </span>
-          )}
-          {jogador.patrocinios.length > 0 && (
-            <span>
-              Patrocínios: <strong className="text-foreground">{jogador.patrocinios.length}</strong>
-            </span>
-          )}
+
+        {/* Stats HUD */}
+        <div className="flex flex-wrap items-center gap-6 text-xs text-muted-foreground font-medium uppercase tracking-wider">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            <span>Temporada <strong className="text-foreground">{temporada}</strong></span>
+          </div>
+          <Indicador icon={<Star className="h-4 w-4" />} label="Fama" valor={jogador.fama} />
+          <Indicador icon={<Target className="h-4 w-4" />} label="Confiança" valor={jogador.confiancaTecnico} />
+          <Indicador icon={<User className="h-4 w-4" />} label="Elenco" valor={jogador.relacaoElenco} />
+          <Indicador icon={<Activity className="h-4 w-4" />} label="Fadiga" valor={jogador.fadiga} invertido />
+          
+          <div className="flex gap-4 border-l border-white/10 pl-6">
+            {jogador.convocacoesSelecao > 0 && (
+              <span className="flex items-center gap-1.5" title="Convocações">
+                <Shield className="h-4 w-4 text-secondary" />
+                <strong className="text-foreground">{jogador.convocacoesSelecao}</strong>
+              </span>
+            )}
+            {jogador.titulosSelecao.length > 0 && (
+              <span className="flex items-center gap-1.5" title="Títulos de Seleção">
+                <Trophy className="h-4 w-4 text-accent" />
+                <strong className="text-foreground">{jogador.titulosSelecao.length}</strong>
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+      
+      {/* ProgressBar/Decoration */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-primary/0 via-primary to-primary/0 opacity-50" />
+    </motion.div>
   );
 }
 
-function Indicador({ label, valor, invertido }: { label: string; valor: number; invertido?: boolean }) {
+function Indicador({ label, valor, invertido, icon }: { label: string; valor: number; invertido?: boolean; icon?: React.ReactNode }) {
   const cor = invertido
     ? valor >= 70
       ? "text-destructive"
@@ -63,10 +81,11 @@ function Indicador({ label, valor, invertido }: { label: string; valor: number; 
       : valor >= 40
         ? "text-accent"
         : "text-destructive";
+  
   return (
-    <span className="flex items-center gap-1">
-      <span>{label}:</span>
-      <span className={`font-semibold ${cor}`}>{Math.round(valor)}</span>
+    <span className="flex items-center gap-1.5" title={label}>
+      <span className="opacity-70">{icon}</span>
+      <span className={`font-sports text-lg ${cor} w-6 text-right leading-none`}>{Math.round(valor)}</span>
     </span>
   );
 }
