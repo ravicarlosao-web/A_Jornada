@@ -4,10 +4,17 @@ import {
   CLUBES,
   CLUBES_INTERNACIONAIS,
   OBJETIVOS,
+  MANCHETES_EXCEPCIONAL,
   MANCHETES_POSITIVAS,
   MANCHETES_NEGATIVAS,
   MANCHETES_NEUTRAS,
+  MANCHETES_GOLEADOR,
+  MANCHETES_TITULO_CUMPRIDO,
+  MANCHETES_OBJETIVO_FALHOU,
+  MANCHETES_VETERANO,
+  MANCHETES_JOVEM,
   DESCRICOES_LESAO,
+  MANCHETES_LESAO,
   EVENTOS_VESTIARIO_HARMONIA,
   EVENTOS_VESTIARIO_CONFLITO,
   POSTS_REDES_SOCIAIS_POSITIVOS,
@@ -221,6 +228,31 @@ export function aplicarTreino(atributos: Atributos, foco: FocoTreino, idade: num
   return novos;
 }
 
+interface CtxManchete {
+  nome: string;
+  clube: string;
+  gols: number;
+  assist: number;
+  nota: string;
+  idade: number;
+  temporada: number;
+  rival: string;
+  marca?: string;
+}
+
+function fmt(template: string, ctx: CtxManchete): string {
+  return template
+    .replace(/\{nome\}/g, ctx.nome)
+    .replace(/\{clube\}/g, ctx.clube)
+    .replace(/\{gols\}/g, String(ctx.gols))
+    .replace(/\{assist\}/g, String(ctx.assist))
+    .replace(/\{nota\}/g, ctx.nota)
+    .replace(/\{idade\}/g, String(ctx.idade))
+    .replace(/\{temporada\}/g, String(ctx.temporada))
+    .replace(/\{rival\}/g, ctx.rival)
+    .replace(/\{marca\}/g, ctx.marca ?? "");
+}
+
 export interface ResultadoTemporada {
   registro: RegistroTemporada;
   atributosAtualizados: Atributos;
@@ -305,13 +337,34 @@ export function simularTemporada(params: {
   let confiancaTecnico = jogador.confiancaTecnico;
   const manchetes: Manchete[] = [];
 
-  if (notaMedia >= 7.5) {
+  const ctx: CtxManchete = {
+    nome: jogador.nome,
+    clube: jogador.clubeAtual.nome,
+    gols,
+    assist: assistencias,
+    nota: notaMedia.toFixed(1),
+    idade: jogador.idade,
+    temporada: numeroTemporada,
+    rival: jogador.rival.nome,
+  };
+
+  // ── Manchete principal baseada em nota ──────────────────────────────────
+  if (notaMedia >= 8.5) {
+    fama += 10;
+    confiancaTecnico += 10;
+    manchetes.push({
+      id: `${numeroTemporada}-1`,
+      temporada: numeroTemporada,
+      texto: fmt(rng.pick(MANCHETES_EXCEPCIONAL), ctx),
+      tom: "positiva",
+    });
+  } else if (notaMedia >= 7.5) {
     fama += 6;
     confiancaTecnico += 8;
     manchetes.push({
       id: `${numeroTemporada}-1`,
       temporada: numeroTemporada,
-      texto: rng.pick(MANCHETES_POSITIVAS).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(MANCHETES_POSITIVAS), ctx),
       tom: "positiva",
     });
   } else if (notaMedia <= 5.5) {
@@ -320,23 +373,64 @@ export function simularTemporada(params: {
     manchetes.push({
       id: `${numeroTemporada}-1`,
       temporada: numeroTemporada,
-      texto: rng.pick(MANCHETES_NEGATIVAS).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(MANCHETES_NEGATIVAS), ctx),
       tom: "negativa",
     });
   } else {
     manchetes.push({
       id: `${numeroTemporada}-1`,
       temporada: numeroTemporada,
-      texto: rng.pick(MANCHETES_NEUTRAS).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(MANCHETES_NEUTRAS), ctx),
       tom: "neutra",
     });
   }
 
+  // ── Manchete contextual extra: goleador, veterano, jovem ────────────────
+  if (gols >= 15 && (jogador.posicao === "ATA" || jogador.posicao === "MEI") && rng.random() < 0.7) {
+    manchetes.push({
+      id: `${numeroTemporada}-goleador`,
+      temporada: numeroTemporada,
+      texto: fmt(rng.pick(MANCHETES_GOLEADOR), ctx),
+      tom: "positiva",
+    });
+  } else if (jogador.idade >= 33 && rng.random() < 0.5) {
+    manchetes.push({
+      id: `${numeroTemporada}-veterano`,
+      temporada: numeroTemporada,
+      texto: fmt(rng.pick(MANCHETES_VETERANO), ctx),
+      tom: notaMedia >= 6.5 ? "positiva" : "neutra",
+    });
+  } else if (jogador.idade <= 20 && rng.random() < 0.5) {
+    manchetes.push({
+      id: `${numeroTemporada}-jovem`,
+      temporada: numeroTemporada,
+      texto: fmt(rng.pick(MANCHETES_JOVEM), ctx),
+      tom: "positiva",
+    });
+  }
+
+  // ── Manchete de objetivo ─────────────────────────────────────────────────
   if (objetivoCumprido) {
     fama += 5;
     confiancaTecnico += 5;
+    if (rng.random() < 0.6) {
+      manchetes.push({
+        id: `${numeroTemporada}-objetivo`,
+        temporada: numeroTemporada,
+        texto: fmt(rng.pick(MANCHETES_TITULO_CUMPRIDO), ctx),
+        tom: "positiva",
+      });
+    }
   } else {
     confiancaTecnico -= 4;
+    if (rng.random() < 0.5) {
+      manchetes.push({
+        id: `${numeroTemporada}-objetivo`,
+        temporada: numeroTemporada,
+        texto: fmt(rng.pick(MANCHETES_OBJETIVO_FALHOU), ctx),
+        tom: "negativa",
+      });
+    }
   }
 
   confiancaTecnico = rng.clamp(confiancaTecnico, 0, 100);
@@ -358,7 +452,7 @@ export function simularTemporada(params: {
     manchetes.push({
       id: `${numeroTemporada}-lesao`,
       temporada: numeroTemporada,
-      texto: `${jogador.nome} sofre lesão: ${lesao.descricao} e desfalca o time por semanas`,
+      texto: fmt(rng.pick(MANCHETES_LESAO[lesao.gravidade]), ctx),
       tom: "negativa",
       fonte: "imprensa",
     });
@@ -373,7 +467,7 @@ export function simularTemporada(params: {
     const impacto = -Math.round(rng.range(5, 15));
     eventoVestiario = {
       tipo: "conflito",
-      texto: rng.pick(EVENTOS_VESTIARIO_CONFLITO).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(EVENTOS_VESTIARIO_CONFLITO), ctx),
       impactoRelacao: impacto,
     };
     relacaoElenco = rng.clamp(relacaoElenco + impacto, 0, 100);
@@ -382,7 +476,7 @@ export function simularTemporada(params: {
     const impacto = Math.round(rng.range(4, 12));
     eventoVestiario = {
       tipo: "harmonia",
-      texto: rng.pick(EVENTOS_VESTIARIO_HARMONIA).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(EVENTOS_VESTIARIO_HARMONIA), ctx),
       impactoRelacao: impacto,
     };
     relacaoElenco = rng.clamp(relacaoElenco + impacto, 0, 100);
@@ -396,9 +490,7 @@ export function simularTemporada(params: {
     manchetes.push({
       id: `${numeroTemporada}-redes`,
       temporada: numeroTemporada,
-      texto: rng
-        .pick(positivo ? POSTS_REDES_SOCIAIS_POSITIVOS : POSTS_REDES_SOCIAIS_NEGATIVOS)
-        .replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(positivo ? POSTS_REDES_SOCIAIS_POSITIVOS : POSTS_REDES_SOCIAIS_NEGATIVOS), ctx),
       tom: positivo ? "positiva" : "negativa",
       fonte: "redes-sociais",
     });
@@ -418,10 +510,7 @@ export function simularTemporada(params: {
   manchetes.push({
     id: `${numeroTemporada}-rival`,
     temporada: numeroTemporada,
-    texto: rng
-      .pick(venceuRival ? MANCHETES_RIVAL_VITORIA : MANCHETES_RIVAL_DERROTA)
-      .replace("{nome}", jogador.nome)
-      .replace("{rival}", jogador.rival.nome),
+    texto: fmt(rng.pick(venceuRival ? MANCHETES_RIVAL_VITORIA : MANCHETES_RIVAL_DERROTA), ctx),
     tom: venceuRival ? "positiva" : "negativa",
   });
 
@@ -434,7 +523,7 @@ export function simularTemporada(params: {
     manchetes.push({
       id: `${numeroTemporada}-selecao`,
       temporada: numeroTemporada,
-      texto: rng.pick(MANCHETES_SELECAO_CONVOCADO).replace("{nome}", jogador.nome),
+      texto: fmt(rng.pick(MANCHETES_SELECAO_CONVOCADO), ctx),
       tom: "positiva",
     });
     if (rng.random() < 0.12) {
@@ -443,7 +532,7 @@ export function simularTemporada(params: {
       manchetes.push({
         id: `${numeroTemporada}-selecao-titulo`,
         temporada: numeroTemporada,
-        texto: rng.pick(MANCHETES_SELECAO_TITULO).replace("{nome}", jogador.nome),
+        texto: fmt(rng.pick(MANCHETES_SELECAO_TITULO), ctx),
         tom: "positiva",
       });
     }
