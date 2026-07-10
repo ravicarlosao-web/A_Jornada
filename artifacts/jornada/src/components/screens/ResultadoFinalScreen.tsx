@@ -53,6 +53,9 @@ export function ResultadoFinalScreen({
         <Stat label="Gols" value={totalGols} />
         <Stat label="Assistências" value={totalAssist} />
         <Stat label="Prêmios" value={jogador.premios.length} />
+        <Stat label="Convocações seleção" value={jogador.convocacoesSelecao} />
+        <Stat label="Títulos pela seleção" value={jogador.titulosSelecao.length} />
+        <Stat label="Patrocínios" value={jogador.patrocinios.length} />
       </div>
 
       {epilogo && (

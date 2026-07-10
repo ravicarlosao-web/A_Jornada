@@ -238,6 +238,7 @@ export function useCareer() {
           salarioAnual: proposta.salarioAnual,
           duracaoAnos: proposta.duracaoAnos,
           anosRestantes: proposta.duracaoAnos,
+          clausulas: proposta.clausulas,
         },
         confiancaTecnico: proposta.ehClubeAtual ? prev.jogador.confiancaTecnico : 50,
       };
@@ -312,6 +313,13 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     ? [...prev.jogador.premios, resultado.registro.premio]
     : prev.jogador.premios;
 
+  const titulosSelecao = resultado.tituloSelecaoConquistado
+    ? [...prev.jogador.titulosSelecao, resultado.tituloSelecaoConquistado]
+    : prev.jogador.titulosSelecao;
+  const patrocinios = resultado.novoPatrocinio
+    ? [...prev.jogador.patrocinios, resultado.novoPatrocinio]
+    : prev.jogador.patrocinios;
+
   const jogadorAtualizado: Jogador = {
     ...prev.jogador,
     fama: resultado.famaAtualizada,
@@ -320,6 +328,10 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     relacaoElenco: resultado.relacaoElencoAtualizada,
     historicoTemporadas: [...prev.jogador.historicoTemporadas, resultado.registro],
     premios,
+    rival: resultado.rivalAtualizado,
+    convocacoesSelecao: prev.jogador.convocacoesSelecao + resultado.convocacoesSelecaoIncremento,
+    titulosSelecao,
+    patrocinios,
   };
 
   return {

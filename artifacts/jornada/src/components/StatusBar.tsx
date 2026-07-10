@@ -35,6 +35,16 @@ export function StatusBar({ jogador }: { jogador: Jogador }) {
           <Indicador label="Confiança" valor={jogador.confiancaTecnico} />
           <Indicador label="Elenco" valor={jogador.relacaoElenco} />
           <Indicador label="Fadiga" valor={jogador.fadiga} invertido />
+          {jogador.convocacoesSelecao > 0 && (
+            <span>
+              Seleção: <strong className="text-foreground">{jogador.convocacoesSelecao}</strong>
+            </span>
+          )}
+          {jogador.patrocinios.length > 0 && (
+            <span>
+              Patrocínios: <strong className="text-foreground">{jogador.patrocinios.length}</strong>
+            </span>
+          )}
         </div>
       </div>
     </div>

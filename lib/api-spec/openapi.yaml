@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: hall-da-fama
+    description: Jornada career hall of fame operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /jornada/hall-da-fama:
+    get:
+      operationId: listarHallDaFama
+      tags: [hall-da-fama]
+      summary: Lista o Hall da Fama
+      description: Retorna as melhores carreiras já finalizadas, ordenadas por pontuação
+      responses:
+        "200":
+          description: Lista do Hall da Fama
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HallDaFamaEntry"
+    post:
+      operationId: salvarHallDaFama
+      tags: [hall-da-fama]
+      summary: Salva uma carreira encerrada no Hall da Fama
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NovaHallDaFamaEntry"
+      responses:
+        "201":
+          description: Carreira salva
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HallDaFamaEntry"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +67,60 @@ components:
           type: string
       required:
         - status
+    NovaHallDaFamaEntry:
+      type: object
+      properties:
+        seedCarreira:
+          type: string
+        nome:
+          type: string
+        posicao:
+          type: string
+        tier:
+          type: string
+        score:
+          type: integer
+        overallFinal:
+          type: integer
+        temporadas:
+          type: integer
+        gols:
+          type: integer
+        assistencias:
+          type: integer
+        premios:
+          type: integer
+        convocacoesSelecao:
+          type: integer
+        titulosSelecao:
+          type: integer
+        patrocinios:
+          type: integer
+        clubeFinal:
+          type: string
+      required:
+        - seedCarreira
+        - nome
+        - posicao
+        - tier
+        - score
+        - overallFinal
+        - temporadas
+        - gols
+        - assistencias
+        - premios
+        - clubeFinal
+    HallDaFamaEntry:
+      allOf:
+        - $ref: "#/components/schemas/NovaHallDaFamaEntry"
+        - type: object
+          properties:
+            id:
+              type: integer
+            criadoEm:
+              type: string
+              format: date-time
+          required:
+            - id
+            - criadoEm
 

@@ -24,16 +24,71 @@ export const LENDAS: { nome: string; atributo: keyof AtributosBase }[] = [
 ];
 
 export const CLUBES: Clube[] = [
-  { nome: "Vila Operária FC", forca: 1, tier: "pequeno" },
-  { nome: "União Serrana", forca: 1, tier: "pequeno" },
-  { nome: "Atlético do Porto Velho", forca: 2, tier: "pequeno" },
-  { nome: "Ferroviário EC", forca: 2, tier: "medio" },
-  { nome: "Recreativo Nacional", forca: 3, tier: "medio" },
-  { nome: "Estrela do Sul", forca: 3, tier: "medio" },
-  { nome: "Grêmio Continental", forca: 4, tier: "grande" },
-  { nome: "Real Capital", forca: 4, tier: "grande" },
-  { nome: "Internacional Metropolitano", forca: 5, tier: "grande" },
-  { nome: "Clube Atlético Imperial", forca: 5, tier: "grande" },
+  { nome: "Vila Operária FC", forca: 1, tier: "pequeno", pais: "Brasil" },
+  { nome: "União Serrana", forca: 1, tier: "pequeno", pais: "Brasil" },
+  { nome: "Atlético do Porto Velho", forca: 2, tier: "pequeno", pais: "Brasil" },
+  { nome: "Ferroviário EC", forca: 2, tier: "medio", pais: "Brasil" },
+  { nome: "Recreativo Nacional", forca: 3, tier: "medio", pais: "Brasil" },
+  { nome: "Estrela do Sul", forca: 3, tier: "medio", pais: "Brasil" },
+  { nome: "Grêmio Continental", forca: 4, tier: "grande", pais: "Brasil" },
+  { nome: "Real Capital", forca: 4, tier: "grande", pais: "Brasil" },
+  { nome: "Internacional Metropolitano", forca: 5, tier: "grande", pais: "Brasil" },
+  { nome: "Clube Atlético Imperial", forca: 5, tier: "grande", pais: "Brasil" },
+];
+
+export const CLUBES_INTERNACIONAIS: Clube[] = [
+  { nome: "Royale Sporting Club", forca: 4, tier: "internacional", pais: "Bélgica" },
+  { nome: "Estrella Andina FC", forca: 4, tier: "internacional", pais: "Argentina" },
+  { nome: "Athletic de Lisboa", forca: 4, tier: "internacional", pais: "Portugal" },
+  { nome: "FC Alpenstadt", forca: 5, tier: "internacional", pais: "Suíça" },
+  { nome: "Unión Deportiva Iberia", forca: 5, tier: "internacional", pais: "Espanha" },
+  { nome: "Britannia United", forca: 5, tier: "internacional", pais: "Inglaterra" },
+  { nome: "Milano Calcio Club", forca: 5, tier: "internacional", pais: "Itália" },
+  { nome: "Rheinstadt SV", forca: 5, tier: "internacional", pais: "Alemanha" },
+];
+
+export const OBJETIVOS_INTERNACIONAL = [
+  "Vencer a liga local",
+  "Chegar às oitavas da competição continental",
+  "Conquistar a copa nacional",
+];
+
+export const MARCAS_PATROCINIO = [
+  "Rinha Sports",
+  "Voltz Energéticos",
+  "Bandeira Esportes",
+  "NúcleoBet",
+  "Trilha Automóveis",
+  "Zênite Telecom",
+  "Costa Dourada Turismo",
+  "Impacto Suplementos",
+];
+
+export const MANCHETES_PATROCINIO = [
+  "{nome} fecha contrato de imagem com a {marca}",
+  "{marca} anuncia {nome} como novo garoto-propaganda",
+  "Mercado publicitário disputa a imagem de {nome}; {marca} leva a melhor",
+];
+
+export const MANCHETES_SELECAO_CONVOCADO = [
+  "{nome} é convocado para defender a seleção nacional",
+  "Técnico da seleção elogia {nome} e confirma convocação",
+  "{nome} recebe a camisa da seleção pela primeira vez na temporada",
+];
+
+export const MANCHETES_SELECAO_TITULO = [
+  "{nome} é campeão pela seleção nacional! Glória eterna",
+  "Seleção conquista o título com {nome} em campo",
+];
+
+export const MANCHETES_RIVAL_VITORIA = [
+  "{nome} supera o rival direto {rival} na briga pela posição",
+  "{nome} vence a disputa interna com {rival} e segue como referência",
+];
+
+export const MANCHETES_RIVAL_DERROTA = [
+  "{rival} supera {nome} na disputa pela posição nesta temporada",
+  "{nome} perde espaço para {rival} na briga pela titularidade",
 ];
 
 export const OBJETIVOS: Record<Clube["tier"], string[]> = {
@@ -46,6 +101,7 @@ export const OBJETIVOS: Record<Clube["tier"], string[]> = {
     "Vencer a liga nacional",
     "Chegar às semifinais da copa continental principal",
   ],
+  internacional: OBJETIVOS_INTERNACIONAL,
 };
 
 export const MANCHETES_POSITIVAS = [

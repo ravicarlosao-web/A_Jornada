@@ -34,16 +34,37 @@ export function ContratoScreen({
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{proposta.clube.nome}</h2>
-              {proposta.ehClubeAtual && (
-                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">Clube atual</span>
-              )}
+              <div className="flex gap-1">
+                {proposta.ehClubeAtual && (
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">Clube atual</span>
+                )}
+                {proposta.clube.tier === "internacional" && (
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium">Exterior</span>
+                )}
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground capitalize">Força do elenco: {proposta.clube.tier}</p>
+            <p className="text-sm text-muted-foreground capitalize">
+              {proposta.clube.pais} · Força do elenco: {proposta.clube.tier}
+            </p>
             <div className="mt-2 flex items-baseline justify-between">
               <span className="text-2xl font-bold text-primary">{formatarSalario(proposta.salarioAnual)}</span>
               <span className="text-sm text-muted-foreground">/ ano</span>
             </div>
             <p className="text-sm text-muted-foreground">Contrato de {proposta.duracaoAnos} anos</p>
+            <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-muted/40 p-2 text-center text-xs">
+              <div>
+                <p className="text-muted-foreground">Luvas</p>
+                <p className="font-semibold">{formatarSalario(proposta.clausulas.luvas)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Bônus/gol</p>
+                <p className="font-semibold">{formatarSalario(proposta.clausulas.bonusPorGol)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Multa</p>
+                <p className="font-semibold">{formatarSalario(proposta.clausulas.multaRescisoria)}</p>
+              </div>
+            </div>
           </button>
         ))}
       </div>

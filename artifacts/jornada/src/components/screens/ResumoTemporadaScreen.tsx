@@ -69,6 +69,42 @@ export function ResumoTemporadaScreen({
         </div>
       )}
 
+      {registro.disputaRival && (
+        <div
+          className={`rounded-xl border p-4 text-center ${
+            registro.disputaRival === "venceu" ? "border-primary bg-primary/10" : "border-muted bg-muted/40"
+          }`}
+        >
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Disputa pela posição</p>
+          <p className="mt-1 font-semibold">
+            {registro.disputaRival === "venceu" ? "Você venceu a disputa interna" : "Você perdeu espaço na disputa interna"}
+          </p>
+        </div>
+      )}
+
+      {registro.convocadoSelecao && (
+        <div className="rounded-xl border border-primary bg-primary/10 p-4 text-center">
+          <p className="font-semibold">Convocado para a Seleção Nacional</p>
+          {registro.tituloSelecao && (
+            <p className="mt-1 text-sm text-primary">{registro.tituloSelecao} 🏆</p>
+          )}
+        </div>
+      )}
+
+      {registro.novoPatrocinio && (
+        <div className="rounded-xl border border-accent bg-accent/10 p-4 text-center">
+          <p className="font-semibold">Novo patrocínio: {registro.novoPatrocinio.marca}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {registro.novoPatrocinio.valorAnual.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+              maximumFractionDigits: 0,
+            })}{" "}
+            / ano de imagem
+          </p>
+        </div>
+      )}
+
       {registro.manchetes.map((m) => (
         <div key={m.id} className="rounded-xl border p-4 italic text-muted-foreground">
           <span className="mr-2 not-italic text-xs uppercase tracking-wide text-muted-foreground/70">

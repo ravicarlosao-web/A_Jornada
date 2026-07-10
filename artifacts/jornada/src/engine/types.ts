@@ -31,7 +31,8 @@ export interface OpcaoDraft {
 export interface Clube {
   nome: string;
   forca: number; // 1-5
-  tier: "pequeno" | "medio" | "grande";
+  tier: "pequeno" | "medio" | "grande" | "internacional";
+  pais: string;
 }
 
 export interface Manchete {
@@ -71,12 +72,23 @@ export interface RegistroTemporada {
   lesao?: Lesao | null;
   eventoVestiario?: EventoVestiario | null;
   relacaoElenco?: number;
+  disputaRival?: "venceu" | "perdeu" | null;
+  convocadoSelecao?: boolean;
+  tituloSelecao?: string | null;
+  novoPatrocinio?: Patrocinio | null;
+}
+
+export interface ClausulasContrato {
+  multaRescisoria: number;
+  bonusPorGol: number;
+  luvas: number;
 }
 
 export interface Contrato {
   salarioAnual: number;
   duracaoAnos: number;
   anosRestantes: number;
+  clausulas: ClausulasContrato;
 }
 
 export interface PropostaContrato {
@@ -84,6 +96,20 @@ export interface PropostaContrato {
   salarioAnual: number;
   duracaoAnos: number;
   ehClubeAtual: boolean;
+  clausulas: ClausulasContrato;
+}
+
+export interface RivalPosicao {
+  nome: string;
+  overall: number;
+  vitorias: number;
+  derrotas: number;
+}
+
+export interface Patrocinio {
+  marca: string;
+  valorAnual: number;
+  temporadaInicio: number;
 }
 
 export interface Jogador {
@@ -104,6 +130,10 @@ export interface Jogador {
   jovensMentorados: number;
   aposentado: boolean;
   relacaoElenco: number;
+  rival: RivalPosicao;
+  convocacoesSelecao: number;
+  titulosSelecao: string[];
+  patrocinios: Patrocinio[];
 }
 
 export interface FocoTreino {

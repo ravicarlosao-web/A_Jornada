@@ -2,6 +2,7 @@ import { Rng } from "./rng";
 import {
   LENDAS,
   CLUBES,
+  CLUBES_INTERNACIONAIS,
   OBJETIVOS,
   MANCHETES_POSITIVAS,
   MANCHETES_NEGATIVAS,
@@ -11,10 +12,17 @@ import {
   EVENTOS_VESTIARIO_CONFLITO,
   POSTS_REDES_SOCIAIS_POSITIVOS,
   POSTS_REDES_SOCIAIS_NEGATIVOS,
+  MARCAS_PATROCINIO,
+  MANCHETES_PATROCINIO,
+  MANCHETES_SELECAO_CONVOCADO,
+  MANCHETES_SELECAO_TITULO,
+  MANCHETES_RIVAL_VITORIA,
+  MANCHETES_RIVAL_DERROTA,
 } from "./data";
 import type {
   Atributos,
   AtributosBase,
+  ClausulasContrato,
   Clube,
   ConversaTecnicoOpcaoId,
   Dificuldade,
@@ -26,12 +34,31 @@ import type {
   Modo,
   OpcaoDraft,
   OpcaoPosCarreira,
+  Patrocinio,
   Posicao,
   PosCarreiraId,
   PropostaContrato,
   RegistroTemporada,
   ResultadoConversaTecnico,
+  RivalPosicao,
 } from "./types";
+
+const SOBRENOMES_RIVAL = [
+  "Aguiar",
+  "Bittencourt",
+  "Cordeiro",
+  "Duarte",
+  "Fontoura",
+  "Guimarães",
+  "Lacerda",
+  "Monteiro",
+  "Peixoto",
+  "Siqueira",
+];
+
+function gerarNomeRival(rng: Rng): string {
+  return rng.pick(SOBRENOMES_RIVAL);
+}
 
 const ATRIBUTOS_BASE: (keyof AtributosBase)[] = [
   "ritmo",
@@ -117,6 +144,14 @@ export function sortearClube(rng: Rng, dificuldade: Dificuldade): Clube {
   return rng.pick(pool);
 }
 
+function gerarClausulas(rng: Rng, salarioAnual: number, forcaClube: number): ClausulasContrato {
+  return {
+    multaRescisoria: Math.round(salarioAnual * (3 + forcaClube) * rng.range(0.8, 1.3)),
+    bonusPorGol: Math.round(500 + forcaClube * 400 * rng.range(0.8, 1.3)),
+    luvas: Math.round(salarioAnual * 0.15 * rng.range(0.5, 1.4)),
+  };
+}
+
 export function definirObjetivo(rng: Rng, clube: Clube): string {
   return rng.pick(OBJETIVOS[clube.tier]);
 }
@@ -139,6 +174,7 @@ export function criarJogador(params: {
   rng: Rng;
 }): Jogador {
   const clube = sortearClube(params.rng, params.dificuldade);
+  const salarioAnual = 30000 + clube.forca * 20000;
   return {
     seedCarreira: params.seedCarreira,
     modo: params.modo,
@@ -151,12 +187,21 @@ export function criarJogador(params: {
     fadiga: 0,
     confiancaTecnico: 55,
     clubeAtual: clube,
-    contrato: { salarioAnual: 30000 + clube.forca * 20000, duracaoAnos: 2, anosRestantes: 2 },
+    contrato: {
+      salarioAnual,
+      duracaoAnos: 2,
+      anosRestantes: 2,
+      clausulas: gerarClausulas(params.rng, salarioAnual, clube.forca),
+    },
     historicoTemporadas: [],
     premios: [],
     jovensMentorados: 0,
     aposentado: false,
     relacaoElenco: 50,
+    rival: { nome: gerarNomeRival(params.rng), overall: calcularOverall(params.atributos, params.posicao), vitorias: 0, derrotas: 0 },
+    convocacoesSelecao: 0,
+    titulosSelecao: [],
+    patrocinios: [],
   };
 }
 
@@ -183,6 +228,10 @@ export interface ResultadoTemporada {
   confiancaTecnicoAtualizada: number;
   fadigaAtualizada: number;
   relacaoElencoAtualizada: number;
+  rivalAtualizado: RivalPosicao;
+  convocacoesSelecaoIncremento: number;
+  tituloSelecaoConquistado: string | null;
+  novoPatrocinio: Patrocinio | null;
 }
 
 export function simularTemporada(params: {
@@ -356,6 +405,73 @@ export function simularTemporada(params: {
     fama = rng.clamp(fama + (positivo ? 3 : -2), 0, 100);
   }
 
+  // Disputa pela posição com o rival direto no elenco
+  const chanceVencerRival = rng.clamp(0.5 + (overall - jogador.rival.overall) / 100 + (notaMedia - 6.5) * 0.05, 0.1, 0.9);
+  const venceuRival = rng.random() < chanceVencerRival;
+  const disputaRival: "venceu" | "perdeu" = venceuRival ? "venceu" : "perdeu";
+  const rivalAtualizado: RivalPosicao = {
+    ...jogador.rival,
+    overall: rng.clamp(Math.round(jogador.rival.overall + rng.range(-2, 3)), 40, 99),
+    vitorias: jogador.rival.vitorias + (venceuRival ? 1 : 0),
+    derrotas: jogador.rival.derrotas + (venceuRival ? 0 : 1),
+  };
+  manchetes.push({
+    id: `${numeroTemporada}-rival`,
+    temporada: numeroTemporada,
+    texto: rng
+      .pick(venceuRival ? MANCHETES_RIVAL_VITORIA : MANCHETES_RIVAL_DERROTA)
+      .replace("{nome}", jogador.nome)
+      .replace("{rival}", jogador.rival.nome),
+    tom: venceuRival ? "positiva" : "negativa",
+  });
+
+  // Convocação para a seleção nacional
+  const chanceConvocacao = rng.clamp((fama - 40) / 150 + (overall - 65) / 150, 0, 0.55);
+  const convocadoSelecao = rng.random() < chanceConvocacao;
+  let tituloSelecao: string | null = null;
+  if (convocadoSelecao) {
+    fama = rng.clamp(fama + 4, 0, 100);
+    manchetes.push({
+      id: `${numeroTemporada}-selecao`,
+      temporada: numeroTemporada,
+      texto: rng.pick(MANCHETES_SELECAO_CONVOCADO).replace("{nome}", jogador.nome),
+      tom: "positiva",
+    });
+    if (rng.random() < 0.12) {
+      tituloSelecao = "Campeão pela Seleção Nacional";
+      fama = rng.clamp(fama + 10, 0, 100);
+      manchetes.push({
+        id: `${numeroTemporada}-selecao-titulo`,
+        temporada: numeroTemporada,
+        texto: rng.pick(MANCHETES_SELECAO_TITULO).replace("{nome}", jogador.nome),
+        tom: "positiva",
+      });
+    }
+  }
+
+  // Proposta de patrocínio / marca pessoal
+  let novoPatrocinio: Patrocinio | null = null;
+  const temPatrocinioAtivo = jogador.patrocinios.length > 0;
+  const chancePatrocinio = rng.clamp((fama - 25) / 130, 0, 0.4) * (temPatrocinioAtivo ? 0.3 : 1);
+  if (fama >= 30 && rng.random() < chancePatrocinio) {
+    const marca = rng.pick(MARCAS_PATROCINIO);
+    novoPatrocinio = {
+      marca,
+      valorAnual: Math.round((5000 + fama * 800) * rng.range(0.8, 1.3)),
+      temporadaInicio: numeroTemporada,
+    };
+    manchetes.push({
+      id: `${numeroTemporada}-patrocinio`,
+      temporada: numeroTemporada,
+      texto: rng
+        .pick(MANCHETES_PATROCINIO)
+        .replace("{nome}", jogador.nome)
+        .replace("{marca}", marca),
+      tom: "positiva",
+      fonte: "redes-sociais",
+    });
+  }
+
   const registro: RegistroTemporada = {
     temporada: numeroTemporada,
     idade: jogador.idade,
@@ -373,6 +489,10 @@ export function simularTemporada(params: {
     lesao,
     eventoVestiario,
     relacaoElenco,
+    disputaRival,
+    convocadoSelecao,
+    tituloSelecao,
+    novoPatrocinio,
   };
 
   return {
@@ -382,6 +502,10 @@ export function simularTemporada(params: {
     confiancaTecnicoAtualizada: confiancaTecnico,
     fadigaAtualizada,
     relacaoElencoAtualizada: relacaoElenco,
+    rivalAtualizado,
+    convocacoesSelecaoIncremento: convocadoSelecao ? 1 : 0,
+    tituloSelecaoConquistado: tituloSelecao,
+    novoPatrocinio,
   };
 }
 
@@ -393,11 +517,13 @@ export function gerarPropostasContrato(params: {
   const overall = calcularOverall(jogador.atributos, jogador.posicao);
   const nivel = overall + jogador.fama * 0.2;
 
+  const salarioAtualNovo = Math.round(jogador.contrato.salarioAnual * (1 + rng.range(0.05, 0.25)));
   const propostaAtual: PropostaContrato = {
     clube: jogador.clubeAtual,
-    salarioAnual: Math.round(jogador.contrato.salarioAnual * (1 + rng.range(0.05, 0.25))),
+    salarioAnual: salarioAtualNovo,
     duracaoAnos: rng.int(2, 4),
     ehClubeAtual: true,
+    clausulas: gerarClausulas(rng, salarioAtualNovo, jogador.clubeAtual.forca),
   };
 
   const propostas: PropostaContrato[] = [propostaAtual];
@@ -409,12 +535,34 @@ export function gerarPropostasContrato(params: {
   const numOfertas = rng.random() < 0.7 ? (rng.random() < 0.5 ? 1 : 2) : 0;
   for (let i = 0; i < numOfertas && i < candidatos.length; i++) {
     const clube = candidatos[i];
+    const salarioAnual = Math.round((30000 + clube.forca * 25000) * rng.range(0.9, 1.2));
     propostas.push({
       clube,
-      salarioAnual: Math.round((30000 + clube.forca * 25000) * rng.range(0.9, 1.2)),
+      salarioAnual,
       duracaoAnos: rng.int(2, 4),
       ehClubeAtual: false,
+      clausulas: gerarClausulas(rng, salarioAnual, clube.forca),
     });
+  }
+
+  // Propostas do exterior: só surgem para jogadores com fama e overall consolidados
+  const elegivelExterior = nivel >= 68 && jogador.fama >= 45;
+  if (elegivelExterior && rng.random() < 0.55) {
+    const numOfertasExterior = rng.random() < 0.5 ? 1 : 2;
+    const candidatosExterior = [...CLUBES_INTERNACIONAIS].sort(
+      (a, b) => Math.abs(a.forca * 20 - nivel) - Math.abs(b.forca * 20 - nivel),
+    );
+    for (let i = 0; i < numOfertasExterior && i < candidatosExterior.length; i++) {
+      const clube = candidatosExterior[i];
+      const salarioAnual = Math.round((60000 + clube.forca * 45000) * rng.range(0.9, 1.3));
+      propostas.push({
+        clube,
+        salarioAnual,
+        duracaoAnos: rng.int(2, 4),
+        ehClubeAtual: false,
+        clausulas: gerarClausulas(rng, salarioAnual, clube.forca),
+      });
+    }
   }
 
   return propostas;
