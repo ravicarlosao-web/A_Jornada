@@ -78,9 +78,10 @@ function App() {
         />
       )}
 
-      {estado.fase === "resumo-temporada" && estado.ultimoRegistro && (
+      {estado.fase === "resumo-temporada" && estado.ultimoRegistro && estado.jogador && (
         <ResumoTemporadaScreen
           registro={estado.ultimoRegistro}
+          jogador={estado.jogador}
           onContinuar={continuarCarreira}
           onAposentar={aposentar}
           podeAposentar={(estado.jogador?.idade ?? 0) >= 28}

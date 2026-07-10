@@ -1,1 +1,2 @@
 - [Jornada MVP scope](jornada-scope.md) — football career sim; draft/position/season-loop/tiers/injuries/contracts/dressing-room/social-media done; post-career content still missing from full spec.
+- [Jornada audit progress](jornada-audit.md) — 6-item audit tackled in order: TreinoScreen, DraftScreen, Headlines, ConversaTecnico, ResultadoFinal, Narrativa — all complete as of session.
