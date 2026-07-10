@@ -1,6 +1,6 @@
 import { calcularOverall } from "@/engine/engine";
 import type { Jogador } from "@/engine/types";
-import { User, Activity, Star, Calendar, Shield, Trophy, Target } from "lucide-react";
+import { User, Activity, Star, Calendar, Shield, Trophy, Target, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function StatusBar({ jogador }: { jogador: Jogador }) {
@@ -45,7 +45,13 @@ export function StatusBar({ jogador }: { jogador: Jogador }) {
           <Indicador icon={<Target className="h-4 w-4" />} label="Confiança" valor={jogador.confiancaTecnico} />
           <Indicador icon={<User className="h-4 w-4" />} label="Elenco" valor={jogador.relacaoElenco} />
           <Indicador icon={<Activity className="h-4 w-4" />} label="Fadiga" valor={jogador.fadiga} invertido />
-          
+          <span className="flex items-center gap-1.5" title="Dinheiro">
+            <Wallet className="h-4 w-4 text-accent" />
+            <span className="font-sports text-lg text-accent leading-none">
+              R$ {jogador.dinheiro.toLocaleString("pt-BR")}
+            </span>
+          </span>
+
           <div className="flex gap-4 border-l border-white/10 pl-6">
             {jogador.convocacoesSelecao > 0 && (
               <span className="flex items-center gap-1.5" title="Convocações">

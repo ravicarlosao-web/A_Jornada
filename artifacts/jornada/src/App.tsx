@@ -12,10 +12,14 @@ import { ResultadoFinalScreen } from "@/components/screens/ResultadoFinalScreen"
 import { PosCarreiraScreen } from "@/components/screens/PosCarreiraScreen";
 import { ConversaTecnicoScreen } from "@/components/screens/ConversaTecnicoScreen";
 import { PatrocinioScreen } from "@/components/screens/PatrocinioScreen";
+import { PartidaAoVivoScreen } from "@/components/screens/PartidaAoVivoScreen";
+import { LojaScreen } from "@/components/screens/LojaScreen";
 
 const FASES_COM_STATUSBAR = new Set([
   "pre-temporada",
   "treino",
+  "loja",
+  "partida-ao-vivo",
   "resumo-temporada",
   "contrato",
   "conversa-tecnico",
@@ -40,6 +44,11 @@ function App() {
     gerarOpcoesPosCarreira,
     escolherConversaTecnico,
     escolherPatrocinio,
+    verResumoTemporada,
+    abrirLoja,
+    fecharLoja,
+    comprarNaLoja,
+    abrirConversaTecnico,
   } = useCareer();
 
   const mostrarStatusBar = estado.jogador && FASES_COM_STATUSBAR.has(estado.fase);
@@ -67,7 +76,21 @@ function App() {
       )}
 
       {estado.fase === "pre-temporada" && estado.jogador && (
-        <PreTemporadaScreen jogador={estado.jogador} onAvancar={avancarDaPreTemporada} />
+        <PreTemporadaScreen
+          jogador={estado.jogador}
+          onAvancar={avancarDaPreTemporada}
+          onAbrirLoja={abrirLoja}
+          onAbrirConversaTecnico={abrirConversaTecnico}
+        />
+      )}
+
+      {estado.fase === "loja" && estado.jogador && (
+        <LojaScreen
+          jogador={estado.jogador}
+          mensagem={estado.mensagemLoja}
+          onComprar={comprarNaLoja}
+          onFechar={fecharLoja}
+        />
       )}
 
       {estado.fase === "treino" && estado.jogador && (
@@ -75,6 +98,15 @@ function App() {
           jogador={estado.jogador}
           ultimoFocoTreino={estado.ultimoFocoTreino}
           onConfirmar={confirmarTreino}
+        />
+      )}
+
+      {estado.fase === "partida-ao-vivo" && estado.ultimoRegistro && estado.jogador && (
+        <PartidaAoVivoScreen
+          momentos={estado.ultimoRegistro.melhoresMomentos ?? []}
+          clube={estado.ultimoRegistro.clube}
+          temporada={estado.ultimoRegistro.temporada}
+          onFinalizar={verResumoTemporada}
         />
       )}
 

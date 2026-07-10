@@ -5,9 +5,11 @@ import {
   aplicarTreino,
   calcularOverall,
   calcularTierFinal,
+  comprarItemLoja,
   criarAtributosBase,
   criarJogador,
   definirStatusElenco,
+  fmt,
   gerarEpilogo,
   gerarOpcoesDraft,
   gerarOpcoesPosCarreira,
@@ -17,6 +19,7 @@ import {
   resolverConversaTecnico,
   simularTemporada,
 } from "@/engine/engine";
+import { MANCHETES_PATROCINIO } from "@/engine/data";
 import { salvarNoHallDaFama } from "@/state/hallDaFama";
 import type {
   Atributos,
@@ -24,6 +27,7 @@ import type {
   Dificuldade,
   FocoTreino,
   Jogador,
+  Manchete,
   Modo,
   OpcaoDraft,
   Patrocinio,
@@ -41,6 +45,8 @@ export type Fase =
   | "posicao"
   | "pre-temporada"
   | "treino"
+  | "loja"
+  | "partida-ao-vivo"
   | "resumo-temporada"
   | "conversa-tecnico"
   | "patrocinio"
@@ -69,6 +75,8 @@ function normalizarJogador(jogador: Jogador): Jogador {
     titulosSelecao: jogador.titulosSelecao ?? [],
     patrocinios: jogador.patrocinios ?? [],
     crisesComTecnico: jogador.crisesComTecnico ?? 0,
+    dinheiro: jogador.dinheiro ?? 0,
+    itensComprados: jogador.itensComprados ?? [],
   };
 }
 
@@ -89,6 +97,10 @@ interface EstadoJogo {
   mensagemConversaTecnico: string | null;
   propostaPatrocinioPendente: Patrocinio | null;
   ultimoFocoTreino: FocoTreino | null;
+  faseAnteriorLoja: Fase | null;
+  mensagemLoja: string | null;
+  conversaVoluntaria: boolean;
+  transferenciaSolicitadaNestaTemporada: boolean;
 }
 
 const MAX_RODADAS_DRAFT = 8;
@@ -112,6 +124,10 @@ function estadoInicial(): EstadoJogo {
     mensagemConversaTecnico: null,
     propostaPatrocinioPendente: null,
     ultimoFocoTreino: null,
+    faseAnteriorLoja: null,
+    mensagemLoja: null,
+    conversaVoluntaria: false,
+    transferenciaSolicitadaNestaTemporada: false,
   };
 }
 
@@ -260,11 +276,28 @@ export function useCareer() {
           ? { ...prev.jogador, patrocinios: [...prev.jogador.patrocinios, proposta] }
           : prev.jogador;
         const historicoAtualizado = aceitar
-          ? jogadorAtualizado.historicoTemporadas.map((registro, i) =>
-              i === jogadorAtualizado.historicoTemporadas.length - 1
-                ? { ...registro, novoPatrocinio: proposta }
-                : registro,
-            )
+          ? jogadorAtualizado.historicoTemporadas.map((registro, i) => {
+              if (i !== jogadorAtualizado.historicoTemporadas.length - 1) return registro;
+              const texto = fmt(rng.pick(MANCHETES_PATROCINIO), {
+                nome: jogadorAtualizado.nome,
+                clube: jogadorAtualizado.clubeAtual.nome,
+                gols: registro.gols,
+                assist: registro.assistencias,
+                nota: registro.notaMedia.toFixed(1),
+                idade: registro.idade,
+                temporada: registro.temporada,
+                rival: jogadorAtualizado.rival.nome,
+                marca: proposta.marca,
+              });
+              const manchete: Manchete = {
+                id: `${registro.temporada}-patrocinio`,
+                temporada: registro.temporada,
+                texto,
+                tom: "positiva",
+                fonte: "imprensa",
+              };
+              return { ...registro, novoPatrocinio: proposta, manchetes: [...registro.manchetes, manchete] };
+            })
           : jogadorAtualizado.historicoTemporadas;
         const proximo: EstadoJogo = {
           ...prev,
@@ -285,7 +318,36 @@ export function useCareer() {
       setEstado((prev) => {
         if (!prev.jogador) return prev;
         const resultado = resolverConversaTecnico(prev.jogador, opcao, rng);
-        return avancarTemporadaOuContrato({ ...prev, jogador: resultado.jogador }, rng);
+        const jogadorAtualizado = resultado.jogador;
+        const eraVoluntaria = prev.conversaVoluntaria;
+
+        // Pedir transferência força negociação imediata, mesmo com contrato em vigor.
+        // Só é permitido uma vez por temporada — evita loop de solicitar transferência
+        // repetidamente para acumular bônus de assinatura sem nunca jogar a temporada.
+        if (
+          opcao === "pedir-transferencia" &&
+          jogadorAtualizado.contrato.anosRestantes > 0 &&
+          !prev.transferenciaSolicitadaNestaTemporada
+        ) {
+          const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
+          return {
+            ...prev,
+            jogador: jogadorAtualizado,
+            propostasContrato: propostas,
+            mensagensNegociacao: {},
+            fase: "contrato",
+            conversaVoluntaria: false,
+            transferenciaSolicitadaNestaTemporada: true,
+          };
+        }
+
+        // Conversa iniciada por escolha do jogador (não por crise pós-temporada):
+        // não avança a temporada, apenas volta para a pré-temporada.
+        if (eraVoluntaria) {
+          return { ...prev, jogador: jogadorAtualizado, fase: "pre-temporada", conversaVoluntaria: false };
+        }
+
+        return avancarTemporadaOuContrato({ ...prev, jogador: jogadorAtualizado }, rng);
       });
     },
     [rng],
@@ -294,6 +356,13 @@ export function useCareer() {
   const escolherProposta = useCallback((proposta: PropostaContrato) => {
     setEstado((prev) => {
       if (!prev.jogador) return prev;
+      // Transferência antecipada (contrato anterior ainda em vigor) para outro clube:
+      // o novo clube paga a multa rescisória à luvas do jogador como incentivo de assinatura.
+      const transferenciaAntecipada = prev.jogador.contrato.anosRestantes > 0 && !proposta.ehClubeAtual;
+      const luvasTransferencia = transferenciaAntecipada
+        ? Math.round(prev.jogador.contrato.clausulas.multaRescisoria * 0.12)
+        : 0;
+
       const jogadorAtualizado: Jogador = {
         ...prev.jogador,
         clubeAtual: proposta.clube,
@@ -304,6 +373,7 @@ export function useCareer() {
           clausulas: proposta.clausulas,
         },
         confiancaTecnico: proposta.ehClubeAtual ? prev.jogador.confiancaTecnico : 50,
+        dinheiro: prev.jogador.dinheiro + luvasTransferencia,
       };
       return {
         ...prev,
@@ -365,6 +435,39 @@ export function useCareer() {
     [rng],
   );
 
+  const verResumoTemporada = useCallback(() => {
+    setEstado((prev) => (prev.fase === "partida-ao-vivo" ? { ...prev, fase: "resumo-temporada" } : prev));
+  }, []);
+
+  const abrirConversaTecnico = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador || prev.fase !== "pre-temporada") return prev;
+      return { ...prev, fase: "conversa-tecnico", conversaVoluntaria: true };
+    });
+  }, []);
+
+  const abrirLoja = useCallback(() => {
+    setEstado((prev) => {
+      if (!prev.jogador || prev.fase === "loja") return prev;
+      return { ...prev, fase: "loja", faseAnteriorLoja: prev.fase, mensagemLoja: null };
+    });
+  }, []);
+
+  const fecharLoja = useCallback(() => {
+    setEstado((prev) => {
+      if (prev.fase !== "loja") return prev;
+      return { ...prev, fase: prev.faseAnteriorLoja ?? "pre-temporada", faseAnteriorLoja: null, mensagemLoja: null };
+    });
+  }, []);
+
+  const comprarNaLoja = useCallback((itemId: string) => {
+    setEstado((prev) => {
+      if (!prev.jogador) return prev;
+      const { jogador, mensagem } = comprarItemLoja(prev.jogador, itemId);
+      return { ...prev, jogador, mensagemLoja: mensagem };
+    });
+  }, []);
+
   return {
     estado,
     iniciarNovaCarreira,
@@ -382,6 +485,11 @@ export function useCareer() {
     gerarOpcoesPosCarreira,
     escolherConversaTecnico,
     escolherPatrocinio,
+    verResumoTemporada,
+    abrirLoja,
+    fecharLoja,
+    comprarNaLoja,
+    abrirConversaTecnico,
   };
 }
 
@@ -397,6 +505,7 @@ function avancarTemporadaOuContrato(prev: EstadoJogo, rng: Rng): EstadoJogo {
     idade: novaIdade,
     contrato: { ...prev.jogador.contrato, anosRestantes },
   };
+  prev = { ...prev, transferenciaSolicitadaNestaTemporada: false };
   if (anosRestantes <= 0) {
     const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
     return {
@@ -440,6 +549,10 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     rival: resultado.rivalAtualizado,
     convocacoesSelecao: prev.jogador.convocacoesSelecao + resultado.convocacoesSelecaoIncremento,
     titulosSelecao,
+    dinheiro:
+      prev.jogador.dinheiro +
+      prev.jogador.contrato.salarioAnual +
+      prev.jogador.patrocinios.reduce((acc, p) => acc + p.valorAnual, 0),
   };
 
   return {
@@ -448,7 +561,7 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     ultimoRegistro: resultado.registro,
     numeroTemporada,
     propostaPatrocinioPendente: resultado.propostaPatrocinio,
-    fase: "resumo-temporada",
+    fase: "partida-ao-vivo",
   };
 }
 

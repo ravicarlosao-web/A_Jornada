@@ -35,10 +35,12 @@ import type {
   Dificuldade,
   EventoVestiario,
   FocoTreino,
+  ItemLoja,
   Jogador,
   Lesao,
   Manchete,
   Modo,
+  MomentoPartida,
   OpcaoDraft,
   OpcaoPosCarreira,
   Patrocinio,
@@ -210,6 +212,8 @@ export function criarJogador(params: {
     convocacoesSelecao: 0,
     titulosSelecao: [],
     patrocinios: [],
+    dinheiro: 0,
+    itensComprados: [],
   };
 }
 
@@ -229,7 +233,7 @@ export function aplicarTreino(atributos: Atributos, foco: FocoTreino, idade: num
   return novos;
 }
 
-interface CtxManchete {
+export interface CtxManchete {
   nome: string;
   clube: string;
   gols: number;
@@ -241,7 +245,7 @@ interface CtxManchete {
   marca?: string;
 }
 
-function fmt(template: string, ctx: CtxManchete): string {
+export function fmt(template: string, ctx: CtxManchete): string {
   return template
     .replace(/\{nome\}/g, ctx.nome)
     .replace(/\{clube\}/g, ctx.clube)
@@ -320,13 +324,65 @@ export function simularTemporada(params: {
   let gols = 0;
   let assistencias = 0;
   let somaNotas = 0;
+  const melhoresMomentos: MomentoPartida[] = [];
+  let melhorJogoIndice = -1;
+  let melhorJogoNota = -1;
   for (let i = 0; i < jogos; i++) {
-    gols += rng.poisson(lambdaGols);
-    assistencias += rng.poisson(lambdaAssist);
+    const golsNoJogo = rng.poisson(lambdaGols);
+    const assistNoJogo = rng.poisson(lambdaAssist);
+    gols += golsNoJogo;
+    assistencias += assistNoJogo;
     const notaJogo = rng.clamp(rng.normal(5.5 + (nivelEfetivo / 99) * 3.5, 0.9), 2, 10);
     somaNotas += notaJogo;
+
+    const adversario = rng.pick(CLUBES).nome;
+    for (let g = 0; g < golsNoJogo; g++) {
+      melhoresMomentos.push({
+        jogo: i + 1,
+        minuto: rng.int(3, 90),
+        tipo: "gol",
+        texto: `GOOOL de ${jogador.nome}! ${jogador.clubeAtual.nome} balança as redes contra o ${adversario}.`,
+      });
+    }
+    for (let a = 0; a < assistNoJogo; a++) {
+      melhoresMomentos.push({
+        jogo: i + 1,
+        minuto: rng.int(3, 90),
+        tipo: "assistencia",
+        texto: `${jogador.nome} enfia o passe perfeito e assina assistência contra o ${adversario}.`,
+      });
+    }
+    if (jogador.posicao === "GOL" && rng.random() < 0.12) {
+      melhoresMomentos.push({
+        jogo: i + 1,
+        minuto: rng.int(3, 90),
+        tipo: "defesa",
+        texto: `Defesa espetacular de ${jogador.nome}! Salva o time diante do ${adversario}.`,
+      });
+    }
+    if (rng.random() < 0.05) {
+      melhoresMomentos.push({
+        jogo: i + 1,
+        minuto: rng.int(3, 90),
+        tipo: "cartao",
+        texto: `Cartão amarelo para ${jogador.nome} em jogada dura contra o ${adversario}.`,
+      });
+    }
+    if (notaJogo > melhorJogoNota) {
+      melhorJogoNota = notaJogo;
+      melhorJogoIndice = i;
+    }
   }
   const notaMedia = Math.round((somaNotas / jogos) * 10) / 10;
+  if (melhorJogoIndice >= 0) {
+    melhoresMomentos.push({
+      jogo: melhorJogoIndice + 1,
+      minuto: 90,
+      tipo: "final",
+      texto: `Apito final: atuação nota ${melhorJogoNota.toFixed(1)} de ${jogador.nome}, a melhor da temporada.`,
+    });
+  }
+  melhoresMomentos.sort((a, b) => a.jogo - b.jogo || a.minuto - b.minuto);
 
   const clube = jogador.clubeAtual;
   const objetivo = definirObjetivo(rng, clube);
@@ -564,6 +620,7 @@ export function simularTemporada(params: {
     convocadoSelecao,
     tituloSelecao,
     novoPatrocinio: null,
+    melhoresMomentos,
   };
 
   return {
@@ -921,6 +978,101 @@ export function gerarEpilogo(jogador: Jogador, escolha: PosCarreiraId, rng: Rng)
     return `${nome} investiu o nome e a fama construídos na carreira em negócios próprios. Hoje comanda um pequeno império avaliado em torno de R$ ${valor.toLocaleString("pt-BR")}, citado como exemplo de atleta que soube planejar o pós-carreira.`;
   }
   return `${nome} se tornou embaixador institucional do ${clube}, representando o clube em eventos, viagens e negociações. Um fechamento à altura de uma carreira marcada por confiança e conquistas.`;
+}
+
+// ─── LOJA / ESTILO DE VIDA ────────────────────────────────────────────────────
+// Utilidade para o dinheiro acumulado com salário e patrocínios: o jogador
+// pode investir em preparação física, imagem ou mentalidade entre temporadas.
+
+export const CATALOGO_LOJA: ItemLoja[] = [
+  {
+    id: "personal-trainer",
+    titulo: "Personal Trainer Particular",
+    descricao: "Reduz a fadiga acumulada em 25 pontos antes da próxima temporada.",
+    categoria: "personal-trainer",
+    custo: 30000,
+    repetivel: true,
+  },
+  {
+    id: "fisioterapeuta-elite",
+    titulo: "Fisioterapeuta de Elite",
+    descricao: "Reduz a fadiga acumulada em 40 pontos e ajuda na recuperação de lesões.",
+    categoria: "personal-trainer",
+    custo: 60000,
+    repetivel: true,
+  },
+  {
+    id: "assessoria-imagem",
+    titulo: "Assessoria de Imagem",
+    descricao: "Investe na sua imagem pública: +8 de Fama imediatos.",
+    categoria: "estilo-de-vida",
+    custo: 45000,
+    repetivel: true,
+  },
+  {
+    id: "mansao",
+    titulo: "Nova Mansão",
+    descricao: "Um símbolo de status. Eleva o bem-estar e dá +5 de Carisma permanentes.",
+    categoria: "estilo-de-vida",
+    custo: 120000,
+    repetivel: false,
+  },
+  {
+    id: "coach-mental",
+    titulo: "Coach de Mentalidade",
+    descricao: "Trabalho de mentalidade com psicólogo esportivo: +6 de Foco permanentes.",
+    categoria: "mentalidade",
+    custo: 70000,
+    repetivel: false,
+  },
+  {
+    id: "terapia-lideranca",
+    titulo: "Programa de Liderança",
+    descricao: "Curso intensivo de liderança: +6 de Liderança permanentes.",
+    categoria: "mentalidade",
+    custo: 75000,
+    repetivel: false,
+  },
+];
+
+export function comprarItemLoja(jogador: Jogador, itemId: string): { jogador: Jogador; mensagem: string } {
+  const item = CATALOGO_LOJA.find((i) => i.id === itemId);
+  if (!item) return { jogador, mensagem: "Item não encontrado." };
+  if (jogador.dinheiro < item.custo) {
+    return { jogador, mensagem: "Você não tem dinheiro suficiente para esta compra." };
+  }
+  if (!item.repetivel && jogador.itensComprados.includes(itemId)) {
+    return { jogador, mensagem: "Você já adquiriu este item — ele é permanente." };
+  }
+
+  let atualizado: Jogador = {
+    ...jogador,
+    dinheiro: jogador.dinheiro - item.custo,
+    itensComprados: item.repetivel ? jogador.itensComprados : [...jogador.itensComprados, itemId],
+  };
+
+  switch (itemId) {
+    case "personal-trainer":
+      atualizado = { ...atualizado, fadiga: Math.max(0, atualizado.fadiga - 25) };
+      break;
+    case "fisioterapeuta-elite":
+      atualizado = { ...atualizado, fadiga: Math.max(0, atualizado.fadiga - 40) };
+      break;
+    case "assessoria-imagem":
+      atualizado = { ...atualizado, fama: atualizado.fama + 8 };
+      break;
+    case "mansao":
+      atualizado = { ...atualizado, atributos: { ...atualizado.atributos, carisma: Math.min(99, atualizado.atributos.carisma + 5) } };
+      break;
+    case "coach-mental":
+      atualizado = { ...atualizado, atributos: { ...atualizado.atributos, foco: Math.min(99, atualizado.atributos.foco + 6) } };
+      break;
+    case "terapia-lideranca":
+      atualizado = { ...atualizado, atributos: { ...atualizado.atributos, lideranca: Math.min(99, atualizado.atributos.lideranca + 6) } };
+      break;
+  }
+
+  return { jogador: atualizado, mensagem: `${item.titulo} adquirido com sucesso.` };
 }
 
 export interface Tier {

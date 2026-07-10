@@ -55,6 +55,15 @@ export interface Lesao {
   descricao: string;
 }
 
+export type TipoMomentoPartida = "gol" | "assistencia" | "cartao" | "lesao" | "defesa" | "final";
+
+export interface MomentoPartida {
+  jogo: number;
+  minuto: number;
+  tipo: TipoMomentoPartida;
+  texto: string;
+}
+
 export interface RegistroTemporada {
   temporada: number;
   idade: number;
@@ -76,6 +85,7 @@ export interface RegistroTemporada {
   convocadoSelecao?: boolean;
   tituloSelecao?: string | null;
   novoPatrocinio?: Patrocinio | null;
+  melhoresMomentos?: MomentoPartida[];
 }
 
 export interface ClausulasContrato {
@@ -136,6 +146,17 @@ export interface Jogador {
   titulosSelecao: string[];
   patrocinios: Patrocinio[];
   crisesComTecnico: number;
+  dinheiro: number;
+  itensComprados: string[];
+}
+
+export interface ItemLoja {
+  id: string;
+  titulo: string;
+  descricao: string;
+  categoria: "personal-trainer" | "estilo-de-vida" | "mentalidade";
+  custo: number;
+  repetivel: boolean;
 }
 
 export interface FocoTreino {

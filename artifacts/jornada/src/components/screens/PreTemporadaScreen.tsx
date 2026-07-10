@@ -1,14 +1,18 @@
 import { useState } from "react";
 import type { Jogador } from "@/engine/types";
 import { motion } from "framer-motion";
-import { CalendarDays, Trophy, UserPlus, Play } from "lucide-react";
+import { CalendarDays, Trophy, UserPlus, Play, ShoppingBag, MessageCircle } from "lucide-react";
 
 export function PreTemporadaScreen({
   jogador,
   onAvancar,
+  onAbrirLoja,
+  onAbrirConversaTecnico,
 }: {
   jogador: Jogador;
   onAvancar: (mentorarJovem?: boolean) => void;
+  onAbrirLoja: () => void;
+  onAbrirConversaTecnico: () => void;
 }) {
   const temporadaNumero = jogador.historicoTemporadas.length + 1;
   const contratoRestante = jogador.contrato.anosRestantes;
@@ -76,13 +80,31 @@ export function PreTemporadaScreen({
         </label>
       )}
 
-      <button
-        onClick={() => onAvancar(mentorar)}
-        className="group relative flex w-full sm:w-auto items-center justify-center gap-3 overflow-hidden rounded-none clip-diagonal bg-primary px-12 py-5 font-bold uppercase tracking-widest text-primary-foreground transition-transform hover:scale-105 active:scale-95"
-      >
-        <span>{jogador.modo === "completo" ? "Avançar para Treinos" : "Iniciar Temporada"}</span>
-        <Play size={18} className="fill-current transition-transform group-hover:translate-x-1" />
-      </button>
+      <div className="flex w-full flex-col items-center gap-4 sm:flex-row sm:justify-center">
+        <button
+          onClick={() => onAvancar(mentorar)}
+          className="group relative flex w-full sm:w-auto items-center justify-center gap-3 overflow-hidden rounded-none clip-diagonal bg-primary px-12 py-5 font-bold uppercase tracking-widest text-primary-foreground transition-transform hover:scale-105 active:scale-95"
+        >
+          <span>{jogador.modo === "completo" ? "Avançar para Treinos" : "Iniciar Temporada"}</span>
+          <Play size={18} className="fill-current transition-transform group-hover:translate-x-1" />
+        </button>
+        <button
+          onClick={onAbrirLoja}
+          className="group flex w-full sm:w-auto items-center justify-center gap-3 rounded-none clip-diagonal border border-accent/40 bg-accent/10 px-10 py-5 font-bold uppercase tracking-widest text-accent transition-transform hover:scale-105 active:scale-95"
+        >
+          <ShoppingBag size={18} />
+          <span>Loja (R$ {jogador.dinheiro.toLocaleString("pt-BR")})</span>
+        </button>
+        {jogador.modo === "completo" && (
+          <button
+            onClick={onAbrirConversaTecnico}
+            className="group flex w-full sm:w-auto items-center justify-center gap-3 rounded-none clip-diagonal border border-white/10 bg-card px-10 py-5 font-bold uppercase tracking-widest text-foreground transition-transform hover:scale-105 active:scale-95"
+          >
+            <MessageCircle size={18} />
+            <span>Falar com o Técnico</span>
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }
