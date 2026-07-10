@@ -68,6 +68,7 @@ function normalizarJogador(jogador: Jogador): Jogador {
     convocacoesSelecao: jogador.convocacoesSelecao ?? 0,
     titulosSelecao: jogador.titulosSelecao ?? [],
     patrocinios: jogador.patrocinios ?? [],
+    crisesComTecnico: jogador.crisesComTecnico ?? 0,
   };
 }
 

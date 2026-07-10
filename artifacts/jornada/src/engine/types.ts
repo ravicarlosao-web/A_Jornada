@@ -135,6 +135,7 @@ export interface Jogador {
   convocacoesSelecao: number;
   titulosSelecao: string[];
   patrocinios: Patrocinio[];
+  crisesComTecnico: number;
 }
 
 export interface FocoTreino {

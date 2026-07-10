@@ -201,6 +201,7 @@ export function criarJogador(params: {
       clausulas: gerarClausulas(params.rng, salarioAnual, clube.forca),
     },
     historicoTemporadas: [],
+    crisesComTecnico: 0,
     premios: [],
     jovensMentorados: 0,
     aposentado: false,
@@ -713,67 +714,146 @@ export function definirStatusElenco(rng: Rng, confiancaTecnico: number): "titula
   return rng.random() < 0.6 ? "reserva" : "rotacao";
 }
 
-export const OPCOES_CONVERSA_TECNICO: { id: ConversaTecnicoOpcaoId; titulo: string; descricao: string }[] = [
-  {
-    id: "respeitoso",
-    titulo: "Pedir explicações com respeito",
-    descricao: "Aborda o técnico em particular, sem drama. Ganho leve de relação, sem risco.",
-  },
-  {
-    id: "cobrar-imprensa",
-    titulo: "Cobrar publicamente (vaza pra imprensa)",
-    descricao: "Risco de irritar o técnico, mas pode render apoio da torcida se você tiver razão.",
-  },
-  {
-    id: "silencio",
-    titulo: "Aceitar a decisão em silêncio",
-    descricao: "Neutro para a relação, mas a frustração acumulada pode abalar seu Temperamento.",
-  },
-  {
-    id: "pedir-transferencia",
-    titulo: "Pedir para ser negociado",
-    descricao: "Sinaliza à diretoria que você quer sair — pode acelerar uma saída de clube.",
-  },
-];
+export type RiscoOpcao = "seguro" | "moderado" | "alto" | "extremo";
+
+export interface OpcaoConversaTecnicoUI {
+  id: ConversaTecnicoOpcaoId;
+  titulo: string;
+  descricao: string;
+  risco: RiscoOpcao;
+  impacto: string;
+}
+
+export function gerarOpcoesConversaTecnico(jogador: Jogador): OpcaoConversaTecnicoUI[] {
+  const crises = jogador.crisesComTecnico;
+  const fama = jogador.fama;
+  const carismaFator = jogador.atributos.carisma / 99;
+
+  const respFator = crises === 0 ? 1 : crises === 1 ? 0.65 : 0.4;
+  const ganhoMin = Math.round(8 * respFator);
+  const ganhoMax = Math.round((10 + carismaFator * 6) * respFator);
+
+  const cobrarFamaBoa = fama > 55 && crises === 0;
+  const cobrarPenMin = cobrarFamaBoa ? 6 : crises >= 1 ? 16 + crises * 3 : 14;
+  const cobrarPenMax = cobrarFamaBoa ? 10 : crises >= 1 ? 22 + crises * 4 : 18;
+
+  return [
+    {
+      id: "respeitoso",
+      titulo: "Conversar com respeito",
+      descricao:
+        crises === 0
+          ? "Aborda o técnico em particular, sem drama. O ganho depende do seu Carisma."
+          : crises === 1
+          ? "Segunda conversa — o técnico ainda ouve, mas a paciência começa a diminuir."
+          : "Após múltiplas crises, este recurso perde força. O técnico já não confia facilmente.",
+      risco: "seguro",
+      impacto: `+${ganhoMin} a +${ganhoMax} Confiança`,
+    },
+    {
+      id: "cobrar-imprensa",
+      titulo: "Vazar crítica para a imprensa",
+      descricao:
+        crises === 0
+          ? "Pode render apoio da torcida se sua Fama for alta, mas custa a relação com o técnico."
+          : "Já em crise — uma crítica pública pode ser catastrófica para sua permanência no clube.",
+      risco: cobrarFamaBoa ? "moderado" : crises >= 2 ? "extremo" : "alto",
+      impacto: cobrarFamaBoa
+        ? `+8 Fama / -${cobrarPenMin} a -${cobrarPenMax} Confiança`
+        : `Sem ganho de fama / -${cobrarPenMin} a -${cobrarPenMax} Confiança`,
+    },
+    {
+      id: "silencio",
+      titulo: "Engolir e ficar em silêncio",
+      descricao:
+        crises === 0
+          ? "Neutro para o técnico, mas a repressão deteriora seu Temperamento e aumenta a Fadiga."
+          : "O acúmulo de frustrações começa a afetar também sua relação com o elenco.",
+      risco: crises >= 2 ? "alto" : "moderado",
+      impacto:
+        crises >= 2
+          ? "-5 Temperamento / +10 Fadiga / -5 Rel. Elenco"
+          : "-4 Temperamento / +8 Fadiga",
+    },
+    {
+      id: "pedir-transferencia",
+      titulo: "Exigir transferência",
+      descricao:
+        crises === 0
+          ? "Sinaliza publicamente que quer sair. A confiança despenca e o clube inicia negociações."
+          : "Com o histórico de crises, a diretoria já esperava isso. Sua saída torna-se inevitável.",
+      risco: "extremo",
+      impacto: crises >= 2 ? "Confiança → 5 / +5 Fama (rumores)" : "Confiança → 15 / +3 Fama (rumores)",
+    },
+  ];
+}
 
 export function resolverConversaTecnico(
   jogador: Jogador,
   opcao: ConversaTecnicoOpcaoId,
   rng: Rng,
 ): ResultadoConversaTecnico {
+  const crises = jogador.crisesComTecnico;
+  const jogadorBase = { ...jogador, crisesComTecnico: crises + 1 };
+
   if (opcao === "respeitoso") {
-    return {
-      jogador: { ...jogador, confiancaTecnico: rng.clamp(jogador.confiancaTecnico + 4, 0, 100) },
-      mensagem: `${jogador.nome} conversou com o técnico com maturidade. A relação melhorou um pouco.`,
-    };
+    const carismaFator = jogador.atributos.carisma / 99;
+    const fator = crises === 0 ? 1 : crises === 1 ? 0.65 : 0.4;
+    const ganho = Math.round(rng.clamp(rng.normal(9 + carismaFator * 6, 2), 8, 14) * fator);
+    const novaConf = rng.clamp(jogadorBase.confiancaTecnico + ganho, 0, 100);
+    const msg =
+      crises === 0
+        ? `${jogador.nome} conversou com o técnico com maturidade. Confiança +${ganho}.`
+        : crises === 1
+        ? `${jogador.nome} tentou reparar a relação, mas o técnico já está cauteloso. Ganho reduzido (+${ganho}).`
+        : `${jogador.nome} insistiu na conversa, mas o técnico mal se abriu. Volta pouco (+${ganho}).`;
+    return { jogador: { ...jogadorBase, confiancaTecnico: novaConf }, mensagem: msg };
   }
+
   if (opcao === "cobrar-imprensa") {
-    const notaBoa = jogador.fama > 55;
-    const confiancaTecnico = rng.clamp(jogador.confiancaTecnico - (notaBoa ? 6 : 14), 0, 100);
-    const fama = notaBoa ? rng.clamp(jogador.fama + 5, 0, 100) : jogador.fama;
-    return {
-      jogador: { ...jogador, confiancaTecnico, fama },
-      mensagem: notaBoa
-        ? `A cobrança pública de ${jogador.nome} caiu bem na torcida, mas azedou a relação com o técnico.`
-        : `A cobrança pública de ${jogador.nome} irritou bastante o técnico, sem gerar apoio relevante da torcida.`,
-    };
+    const famaBoa = jogador.fama > 55 && crises === 0;
+    const penMin = famaBoa ? 6 : crises >= 1 ? 16 + crises * 3 : 14;
+    const penMax = famaBoa ? 10 : crises >= 1 ? 22 + crises * 4 : 18;
+    const pen = Math.round(rng.range(penMin, penMax));
+    const novaConf = rng.clamp(jogadorBase.confiancaTecnico - pen, 0, 100);
+    const novaFama = famaBoa ? rng.clamp(jogador.fama + 8, 0, 100) : jogador.fama;
+    const msg = famaBoa
+      ? `A cobrança pública de ${jogador.nome} caiu bem na torcida (+8 Fama), mas custou a confiança do técnico (-${pen}).`
+      : crises >= 1
+      ? `${jogador.nome} foi público mais uma vez. O técnico está furioso e a diretoria pediu explicações. Confiança -${pen}.`
+      : `A cobrança de ${jogador.nome} irritou o técnico sem gerar apoio relevante. Situação piorou bastante (-${pen}).`;
+    return { jogador: { ...jogadorBase, confiancaTecnico: novaConf, fama: novaFama }, mensagem: msg };
   }
+
   if (opcao === "silencio") {
+    const tempPen = crises >= 2 ? 5 : 4;
+    const fadigaExtra = crises >= 2 ? 10 : 8;
+    const novaRelacao = crises >= 2 ? rng.clamp(jogador.relacaoElenco - 5, 0, 100) : jogador.relacaoElenco;
+    const msg =
+      crises === 0
+        ? `${jogador.nome} engoliu a frustração. O desgaste emocional pesa.`
+        : crises === 1
+        ? `Segunda vez em silêncio. A tensão começa a aparecer nas interações com o elenco.`
+        : `O silêncio crônico de ${jogador.nome} está afetando o grupo. Companheiros percebem o clima pesado.`;
     return {
       jogador: {
-        ...jogador,
-        atributos: {
-          ...jogador.atributos,
-          temperamento: rng.clamp(jogador.atributos.temperamento - 3, 1, 99),
-        },
+        ...jogadorBase,
+        fadiga: rng.clamp(jogador.fadiga + fadigaExtra, 0, 100),
+        relacaoElenco: novaRelacao,
+        atributos: { ...jogador.atributos, temperamento: rng.clamp(jogador.atributos.temperamento - tempPen, 1, 99) },
       },
-      mensagem: `${jogador.nome} engoliu a frustração em silêncio. O desgaste emocional pesa aos poucos.`,
+      mensagem: msg,
     };
   }
-  return {
-    jogador: { ...jogador, confiancaTecnico: rng.clamp(jogador.confiancaTecnico - 5, 0, 100) },
-    mensagem: `${jogador.nome} pediu para ser negociado. A diretoria já avalia propostas de saída.`,
-  };
+
+  // pedir-transferencia
+  const novaConf = rng.clamp(crises >= 2 ? 5 : 15, 0, 100);
+  const novaFama = rng.clamp(jogador.fama + (crises >= 1 ? 5 : 3), 0, 100);
+  const msg =
+    crises === 0
+      ? `${jogador.nome} pediu para ser negociado. A diretoria já avalia propostas de saída.`
+      : `Com o histórico de crises, a diretoria não ficou surpresa. ${jogador.nome} está oficialmente na lista de transferências.`;
+  return { jogador: { ...jogadorBase, confiancaTecnico: novaConf, fama: novaFama }, mensagem: msg };
 }
 
 export function mentorarJovem(jogador: Jogador): Jogador {
