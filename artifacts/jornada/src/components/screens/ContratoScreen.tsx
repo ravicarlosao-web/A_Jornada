@@ -7,11 +7,15 @@ function formatarSalario(valor: number): string {
 export function ContratoScreen({
   jogador,
   propostas,
+  mensagensNegociacao,
   onEscolher,
+  onNegociar,
 }: {
   jogador: Jogador;
   propostas: PropostaContrato[];
+  mensagensNegociacao: Record<string, string>;
   onEscolher: (proposta: PropostaContrato) => void;
+  onNegociar: (propostaId: string) => void;
 }) {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 px-4 py-16">
@@ -21,17 +25,20 @@ export function ContratoScreen({
         </p>
         <h1 className="mt-1 text-3xl font-bold">Hora de decidir seu futuro</h1>
         <p className="mt-2 text-muted-foreground">
-          Seu vínculo com o {jogador.clubeAtual.nome} chegou ao fim. Avalie as propostas recebidas.
+          Seu vínculo com o {jogador.clubeAtual.nome} chegou ao fim. Avalie as propostas recebidas — você pode
+          negociar uma vez por proposta antes de assinar.
         </p>
       </div>
 
+      {propostas.length === 0 && (
+        <p className="text-center text-muted-foreground">
+          Todas as propostas saíram da mesa de negociação. Isso não deveria acontecer — recarregue a página.
+        </p>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
-        {propostas.map((proposta, i) => (
-          <button
-            key={`${proposta.clube.nome}-${i}`}
-            onClick={() => onEscolher(proposta)}
-            className="hover-elevate active-elevate-2 flex flex-col gap-2 rounded-xl border p-6 text-left"
-          >
+        {propostas.map((proposta) => (
+          <div key={proposta.id} className="flex flex-col gap-2 rounded-xl border p-6 text-left">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{proposta.clube.nome}</h2>
               <div className="flex gap-1">
@@ -65,7 +72,29 @@ export function ContratoScreen({
                 <p className="font-semibold">{formatarSalario(proposta.clausulas.multaRescisoria)}</p>
               </div>
             </div>
-          </button>
+
+            {mensagensNegociacao[proposta.id] && (
+              <p className="mt-1 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                {mensagensNegociacao[proposta.id]}
+              </p>
+            )}
+
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => onEscolher(proposta)}
+                className="hover-elevate active-elevate-2 flex-1 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              >
+                Assinar
+              </button>
+              <button
+                onClick={() => onNegociar(proposta.id)}
+                disabled={!!mensagensNegociacao[proposta.id]}
+                className="hover-elevate active-elevate-2 flex-1 rounded-md border px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                Negociar
+              </button>
+            </div>
+          </div>
         ))}
       </div>
     </div>

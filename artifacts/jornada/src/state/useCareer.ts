@@ -13,6 +13,7 @@ import {
   gerarOpcoesPosCarreira,
   gerarPropostasContrato,
   mentorarJovem,
+  negociarProposta,
   resolverConversaTecnico,
   simularTemporada,
 } from "@/engine/engine";
@@ -25,6 +26,7 @@ import type {
   Jogador,
   Modo,
   OpcaoDraft,
+  Patrocinio,
   PosCarreiraId,
   Posicao,
   PropostaContrato,
@@ -41,6 +43,7 @@ export type Fase =
   | "treino"
   | "resumo-temporada"
   | "conversa-tecnico"
+  | "patrocinio"
   | "contrato"
   | "decisao-continuar"
   | "pos-carreira"
@@ -80,8 +83,10 @@ interface EstadoJogo {
   numeroTemporada: number;
   seed: string;
   propostasContrato: PropostaContrato[];
+  mensagensNegociacao: Record<string, string>;
   epilogoPosCarreira: string | null;
   mensagemConversaTecnico: string | null;
+  propostaPatrocinioPendente: Patrocinio | null;
 }
 
 const MAX_RODADAS_DRAFT = 8;
@@ -100,8 +105,10 @@ function estadoInicial(): EstadoJogo {
     numeroTemporada: 0,
     seed,
     propostasContrato: [],
+    mensagensNegociacao: {},
     epilogoPosCarreira: null,
     mensagemConversaTecnico: null,
+    propostaPatrocinioPendente: null,
   };
 }
 
@@ -231,12 +238,44 @@ export function useCareer() {
   const continuarCarreira = useCallback(() => {
     setEstado((prev) => {
       if (!prev.jogador) return prev;
+      if (prev.propostaPatrocinioPendente) {
+        return { ...prev, fase: "patrocinio" };
+      }
       if (prev.jogador.modo === "completo" && prev.jogador.confiancaTecnico < 40) {
         return { ...prev, fase: "conversa-tecnico" };
       }
       return avancarTemporadaOuContrato(prev, rng);
     });
   }, [rng]);
+
+  const escolherPatrocinio = useCallback(
+    (aceitar: boolean) => {
+      setEstado((prev) => {
+        if (!prev.jogador || !prev.propostaPatrocinioPendente) return prev;
+        const proposta = prev.propostaPatrocinioPendente;
+        const jogadorAtualizado = aceitar
+          ? { ...prev.jogador, patrocinios: [...prev.jogador.patrocinios, proposta] }
+          : prev.jogador;
+        const historicoAtualizado = aceitar
+          ? jogadorAtualizado.historicoTemporadas.map((registro, i) =>
+              i === jogadorAtualizado.historicoTemporadas.length - 1
+                ? { ...registro, novoPatrocinio: proposta }
+                : registro,
+            )
+          : jogadorAtualizado.historicoTemporadas;
+        const proximo: EstadoJogo = {
+          ...prev,
+          jogador: { ...jogadorAtualizado, historicoTemporadas: historicoAtualizado },
+          propostaPatrocinioPendente: null,
+        };
+        if (proximo.jogador!.modo === "completo" && proximo.jogador!.confiancaTecnico < 40) {
+          return { ...proximo, fase: "conversa-tecnico" };
+        }
+        return avancarTemporadaOuContrato(proximo, rng);
+      });
+    },
+    [rng],
+  );
 
   const escolherConversaTecnico = useCallback(
     (opcao: ConversaTecnicoOpcaoId) => {
@@ -263,9 +302,50 @@ export function useCareer() {
         },
         confiancaTecnico: proposta.ehClubeAtual ? prev.jogador.confiancaTecnico : 50,
       };
-      return { ...prev, jogador: jogadorAtualizado, propostasContrato: [], fase: "pre-temporada" };
+      return {
+        ...prev,
+        jogador: jogadorAtualizado,
+        propostasContrato: [],
+        mensagensNegociacao: {},
+        fase: "pre-temporada",
+      };
     });
   }, []);
+
+  const negociarPropostaContrato = useCallback(
+    (propostaId: string) => {
+      setEstado((prev) => {
+        if (!prev.jogador) return prev;
+        const proposta = prev.propostasContrato.find((p) => p.id === propostaId);
+        if (!proposta) return prev;
+        const resultado = negociarProposta(rng, prev.jogador, proposta);
+
+        // Nunca deixe a negociação zerar a lista de propostas — o clube atual
+        // sempre mantém ao menos uma oferta de segurança na mesa.
+        const seriaUltimaProposta = prev.propostasContrato.length === 1;
+        if (resultado.proposta === null && seriaUltimaProposta) {
+          return {
+            ...prev,
+            mensagensNegociacao: {
+              ...prev.mensagensNegociacao,
+              [propostaId]: `${proposta.clube.nome} ameaçou sair, mas topou manter a proposta original — é a única opção na mesa.`,
+            },
+          };
+        }
+
+        const propostasAtualizadas =
+          resultado.proposta === null
+            ? prev.propostasContrato.filter((p) => p.id !== propostaId)
+            : prev.propostasContrato.map((p) => (p.id === propostaId ? resultado.proposta! : p));
+        return {
+          ...prev,
+          propostasContrato: propostasAtualizadas,
+          mensagensNegociacao: { ...prev.mensagensNegociacao, [propostaId]: resultado.mensagem },
+        };
+      });
+    },
+    [rng],
+  );
 
   const aposentar = useCallback(() => {
     setEstado((prev) => finalizarCarreira(prev));
@@ -293,10 +373,12 @@ export function useCareer() {
     confirmarTreino,
     continuarCarreira,
     escolherProposta,
+    negociarPropostaContrato,
     aposentar,
     escolherPosCarreira,
     gerarOpcoesPosCarreira,
     escolherConversaTecnico,
+    escolherPatrocinio,
   };
 }
 
@@ -314,7 +396,13 @@ function avancarTemporadaOuContrato(prev: EstadoJogo, rng: Rng): EstadoJogo {
   };
   if (anosRestantes <= 0) {
     const propostas = gerarPropostasContrato({ rng, jogador: jogadorAtualizado });
-    return { ...prev, jogador: jogadorAtualizado, propostasContrato: propostas, fase: "contrato" };
+    return {
+      ...prev,
+      jogador: jogadorAtualizado,
+      propostasContrato: propostas,
+      mensagensNegociacao: {},
+      fase: "contrato",
+    };
   }
   return { ...prev, jogador: jogadorAtualizado, fase: "pre-temporada" };
 }
@@ -337,9 +425,6 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
   const titulosSelecao = resultado.tituloSelecaoConquistado
     ? [...prev.jogador.titulosSelecao, resultado.tituloSelecaoConquistado]
     : prev.jogador.titulosSelecao;
-  const patrocinios = resultado.novoPatrocinio
-    ? [...prev.jogador.patrocinios, resultado.novoPatrocinio]
-    : prev.jogador.patrocinios;
 
   const jogadorAtualizado: Jogador = {
     ...prev.jogador,
@@ -352,7 +437,6 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     rival: resultado.rivalAtualizado,
     convocacoesSelecao: prev.jogador.convocacoesSelecao + resultado.convocacoesSelecaoIncremento,
     titulosSelecao,
-    patrocinios,
   };
 
   return {
@@ -360,6 +444,7 @@ function simularEAtualizar(prev: EstadoJogo, rng: Rng): EstadoJogo {
     jogador: jogadorAtualizado,
     ultimoRegistro: resultado.registro,
     numeroTemporada,
+    propostaPatrocinioPendente: resultado.propostaPatrocinio,
     fase: "resumo-temporada",
   };
 }

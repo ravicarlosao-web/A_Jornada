@@ -231,7 +231,7 @@ export interface ResultadoTemporada {
   rivalAtualizado: RivalPosicao;
   convocacoesSelecaoIncremento: number;
   tituloSelecaoConquistado: string | null;
-  novoPatrocinio: Patrocinio | null;
+  propostaPatrocinio: Patrocinio | null;
 }
 
 export function simularTemporada(params: {
@@ -449,28 +449,9 @@ export function simularTemporada(params: {
     }
   }
 
-  // Proposta de patrocínio / marca pessoal
-  let novoPatrocinio: Patrocinio | null = null;
-  const temPatrocinioAtivo = jogador.patrocinios.length > 0;
-  const chancePatrocinio = rng.clamp((fama - 25) / 130, 0, 0.4) * (temPatrocinioAtivo ? 0.3 : 1);
-  if (fama >= 30 && rng.random() < chancePatrocinio) {
-    const marca = rng.pick(MARCAS_PATROCINIO);
-    novoPatrocinio = {
-      marca,
-      valorAnual: Math.round((5000 + fama * 800) * rng.range(0.8, 1.3)),
-      temporadaInicio: numeroTemporada,
-    };
-    manchetes.push({
-      id: `${numeroTemporada}-patrocinio`,
-      temporada: numeroTemporada,
-      texto: rng
-        .pick(MANCHETES_PATROCINIO)
-        .replace("{nome}", jogador.nome)
-        .replace("{marca}", marca),
-      tom: "positiva",
-      fonte: "redes-sociais",
-    });
-  }
+  // Proposta de patrocínio / marca pessoal — apenas gera a oferta; a decisão de
+  // aceitar ou recusar é feita pelo jogador na tela dedicada de patrocínio.
+  const propostaPatrocinio = gerarPropostaPatrocinio(rng, jogador, fama, numeroTemporada);
 
   const registro: RegistroTemporada = {
     temporada: numeroTemporada,
@@ -492,7 +473,7 @@ export function simularTemporada(params: {
     disputaRival,
     convocadoSelecao,
     tituloSelecao,
-    novoPatrocinio,
+    novoPatrocinio: null,
   };
 
   return {
@@ -505,7 +486,70 @@ export function simularTemporada(params: {
     rivalAtualizado,
     convocacoesSelecaoIncremento: convocadoSelecao ? 1 : 0,
     tituloSelecaoConquistado: tituloSelecao,
-    novoPatrocinio,
+    propostaPatrocinio,
+  };
+}
+
+/** Gera uma oferta de patrocínio candidata para a temporada, sem aplicá-la. */
+function gerarPropostaPatrocinio(
+  rng: Rng,
+  jogador: Jogador,
+  fama: number,
+  numeroTemporada: number,
+): Patrocinio | null {
+  const temPatrocinioAtivo = jogador.patrocinios.length > 0;
+  const chancePatrocinio = rng.clamp((fama - 25) / 130, 0, 0.4) * (temPatrocinioAtivo ? 0.3 : 1);
+  if (fama < 30 || rng.random() >= chancePatrocinio) return null;
+  const marca = rng.pick(MARCAS_PATROCINIO);
+  return {
+    marca,
+    valorAnual: Math.round((5000 + fama * 800) * rng.range(0.8, 1.3)),
+    temporadaInicio: numeroTemporada,
+  };
+}
+
+export interface ResultadoNegociacao {
+  proposta: PropostaContrato | null;
+  mensagem: string;
+}
+
+/**
+ * Tenta melhorar os termos de uma proposta de contrato. O clube pode aceitar
+ * uma contraproposta melhor, manter os termos originais, ou (com chance menor)
+ * sair da negociação — removendo a proposta da lista.
+ */
+export function negociarProposta(rng: Rng, jogador: Jogador, proposta: PropostaContrato): ResultadoNegociacao {
+  const overall = calcularOverall(jogador.atributos, jogador.posicao);
+  const forcaNegociacao = rng.clamp((jogador.fama - 30) / 100 + (overall - 65) / 150, -0.2, 0.5);
+  const chanceSucesso = rng.clamp(0.45 + forcaNegociacao, 0.15, 0.85);
+  const chanceRompimento = proposta.ehClubeAtual ? 0.05 : 0.18;
+
+  if (rng.random() < chanceRompimento) {
+    return {
+      proposta: null,
+      mensagem: `${proposta.clube.nome} não aceitou a contraproposta e saiu da mesa de negociação.`,
+    };
+  }
+
+  if (rng.random() < chanceSucesso) {
+    const ganho = rng.range(0.08, 0.22);
+    const salarioAnual = Math.round(proposta.salarioAnual * (1 + ganho));
+    return {
+      proposta: {
+        ...proposta,
+        salarioAnual,
+        clausulas: {
+          ...proposta.clausulas,
+          luvas: Math.round(proposta.clausulas.luvas * (1 + ganho * 0.6)),
+        },
+      },
+      mensagem: `Negociação bem-sucedida! Salário melhorado em ${Math.round(ganho * 100)}%.`,
+    };
+  }
+
+  return {
+    proposta,
+    mensagem: `${proposta.clube.nome} manteve a proposta original.`,
   };
 }
 
@@ -517,8 +561,12 @@ export function gerarPropostasContrato(params: {
   const overall = calcularOverall(jogador.atributos, jogador.posicao);
   const nivel = overall + jogador.fama * 0.2;
 
+  let contadorProposta = 0;
+  const proximoId = () => `proposta-${Date.now()}-${contadorProposta++}`;
+
   const salarioAtualNovo = Math.round(jogador.contrato.salarioAnual * (1 + rng.range(0.05, 0.25)));
   const propostaAtual: PropostaContrato = {
+    id: proximoId(),
     clube: jogador.clubeAtual,
     salarioAnual: salarioAtualNovo,
     duracaoAnos: rng.int(2, 4),
@@ -537,6 +585,7 @@ export function gerarPropostasContrato(params: {
     const clube = candidatos[i];
     const salarioAnual = Math.round((30000 + clube.forca * 25000) * rng.range(0.9, 1.2));
     propostas.push({
+      id: proximoId(),
       clube,
       salarioAnual,
       duracaoAnos: rng.int(2, 4),
@@ -556,6 +605,7 @@ export function gerarPropostasContrato(params: {
       const clube = candidatosExterior[i];
       const salarioAnual = Math.round((60000 + clube.forca * 45000) * rng.range(0.9, 1.3));
       propostas.push({
+        id: proximoId(),
         clube,
         salarioAnual,
         duracaoAnos: rng.int(2, 4),

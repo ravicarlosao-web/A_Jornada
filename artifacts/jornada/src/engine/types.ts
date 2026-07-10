@@ -92,6 +92,7 @@ export interface Contrato {
 }
 
 export interface PropostaContrato {
+  id: string;
   clube: Clube;
   salarioAnual: number;
   duracaoAnos: number;
